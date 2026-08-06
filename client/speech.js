@@ -1,19 +1,30 @@
 /**
- * CourtSpeech — natural-voice narration with courtroom pacing and instant
- * interruption. Wraps the browser SpeechSynthesis API.
+ * CourtSpeech — natural courtroom voices with instant interruption.
  *
- * - Speaks events paragraph-by-paragraph at a measured pace (rate ~0.92).
- * - The active event/paragraph is tracked so an OBJECTION lands on exactly
- *   what was being said when the attorney rose.
- * - interrupt() halts speech mid-word (Space or the OBJECTION key).
+ * Primary path: server-side Amazon Polly neural/generative speech via
+ * POST /api/tts, played through a single (iOS-unlocked) audio element with
+ * paragraph prefetch so delivery flows without gaps. Each courtroom role has
+ * a distinct voice; jurors rotate through an ensemble by seat.
+ *
+ * Fallback path: the browser's speechSynthesis at natural rate (no slowed
+ * rate, no pitch manipulation — those are what make it sound robotic).
+ *
+ * The active event/paragraph is tracked so an OBJECTION lands on exactly what
+ * was being said, and interrupt() halts speech mid-word.
  */
 (function () {
   const synth = window.speechSynthesis;
   let voices = [];
   let muted = false;
   let queue = [];
-  let current = null; // { eventId, paragraphIndex, role, onDone }
-  let speakingNow = false;
+  let current = null; // { eventId, paragraphIndex, role, ... }
+  let pumping = false;
+  let unlocked = false;
+
+  const audioEl = new Audio();
+  audioEl.preload = 'auto';
+
+  const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
 
   function loadVoices() {
     voices = synth ? synth.getVoices() : [];
@@ -23,45 +34,57 @@
     synth.onvoiceschanged = loadVoices;
   }
 
+  /* ---------- Polly path ---------- */
+
+  async function fetchAudio(text, role, key) {
+    try {
+      const res = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, role, key }),
+      });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      return blob.size > 200 ? blob : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function playBlob(blob) {
+    return new Promise((resolve) => {
+      const url = URL.createObjectURL(blob);
+      const done = () => {
+        audioEl.removeEventListener('ended', done);
+        audioEl.removeEventListener('error', done);
+        URL.revokeObjectURL(url);
+        resolve();
+      };
+      audioEl.addEventListener('ended', done);
+      audioEl.addEventListener('error', done);
+      audioEl.src = url;
+      audioEl.play().catch(done);
+    });
+  }
+
+  /* ---------- browser fallback (kept natural) ---------- */
+
   function pickVoice(role) {
     if (!voices.length) return null;
-    const prefer = {
-      judge: [/en[-_]US/i],
-      ai_counsel: [/en[-_]US/i, /en[-_]GB/i],
-      witness: [/en/i],
-      juror: [/en/i],
-      clerk: [/en/i],
-    }[role] || [/en/i];
-    const natural = voices.filter((v) => /google|natural|enhanced|premium/i.test(v.name) && /en/i.test(v.lang));
-    const pool = natural.length ? natural : voices.filter((v) => /en/i.test(v.lang));
-    if (!pool.length) return voices[0];
-    // Stable spread of voices across roles so actors sound distinct.
+    const en = voices.filter((v) => /^en[-_]/i.test(v.lang));
+    const premium = en.filter((v) => /premium|enhanced|natural|siri|google/i.test(v.name));
+    const pool = premium.length ? premium : en.length ? en : voices;
     const idx = { judge: 0, ai_counsel: 1, witness: 2, clerk: 3, juror: 4 }[role] ?? 0;
-    for (const re of prefer) {
-      const m = pool.filter((v) => re.test(v.lang));
-      if (m.length) return m[idx % m.length];
-    }
     return pool[idx % pool.length];
   }
 
-  const ROLE_TUNING = {
-    judge: { rate: 0.88, pitch: 0.8 },
-    ai_counsel: { rate: 0.94, pitch: 1.0 },
-    witness: { rate: 0.92, pitch: 1.05 },
-    juror: { rate: 0.95, pitch: 1.0 },
-    clerk: { rate: 0.9, pitch: 0.95 },
-  };
-
-  function speakParagraph(text, role) {
+  function speakFallback(text, role) {
     return new Promise((resolve) => {
-      if (!synth || muted || !text.trim()) return resolve();
+      if (!synth || !text.trim()) return resolve();
       const u = new SpeechSynthesisUtterance(text);
-      const tune = ROLE_TUNING[role] || { rate: 0.92, pitch: 1 };
-      u.rate = tune.rate;
-      u.pitch = tune.pitch;
+      u.rate = 1.0; // natural pace — slowing it is what sounds "underwater"
       const v = pickVoice(role);
       if (v) u.voice = v;
-      // iOS/Chrome occasionally pause long syntheses; nudge them along.
       const watchdog = setInterval(() => {
         if (synth.paused) synth.resume();
       }, 3000);
@@ -75,70 +98,102 @@
     });
   }
 
-  /* iOS Safari requires a user gesture before audio may start. Called once
-   * from the first touch/click — speaks a silent utterance to unlock. */
-  let unlocked = false;
-  function unlock() {
-    if (unlocked || !synth) return;
-    unlocked = true;
-    try {
-      const u = new SpeechSynthesisUtterance(' ');
-      u.volume = 0;
-      synth.speak(u);
-      loadVoices();
-    } catch {
-      /* no-op */
-    }
-  }
+  /* ---------- queue pump with prefetch ---------- */
 
   async function pump() {
-    if (speakingNow) return;
-    speakingNow = true;
+    if (pumping) return;
+    pumping = true;
     while (queue.length) {
       const item = queue.shift();
       current = item;
-      for (let i = item.startPara || 0; i < item.paragraphs.length; i++) {
+      // Prefetch: fire the first two paragraph requests immediately.
+      item.blobs = item.paragraphs.map(() => null);
+      const prefetch = (i) => {
+        if (i < item.paragraphs.length && !item.blobs[i]) {
+          item.blobs[i] = fetchAudio(item.paragraphs[i], item.role, item.key);
+        }
+      };
+      prefetch(0);
+      prefetch(1);
+
+      for (let i = 0; i < item.paragraphs.length; i++) {
+        if (current !== item) break; // interrupted
         current.paragraphIndex = i;
         if (item.onParagraph) item.onParagraph(item.eventId, i);
-        await speakParagraph(item.paragraphs[i], item.role);
-        if (current !== item) break; // interrupted
+        prefetch(i + 1); // keep the pipeline one paragraph ahead
+        if (queue[0]) {
+          queue[0].blobs = queue[0].blobs || queue[0].paragraphs.map(() => null);
+          if (!queue[0].blobs[0]) queue[0].blobs[0] = fetchAudio(queue[0].paragraphs[0], queue[0].role, queue[0].key);
+        }
+        if (muted) continue;
+        const blob = await item.blobs[i];
+        if (current !== item) break;
+        if (blob) await playBlob(blob);
+        else await speakFallback(item.paragraphs[i], item.role);
       }
       if (current === item) {
         current = null;
         if (item.onDone) item.onDone(item.eventId);
       }
     }
-    speakingNow = false;
+    pumping = false;
   }
 
   window.CourtSpeech = {
     /** Unlock audio on iOS — call from the first user gesture. */
-    unlock,
-    /** Queue an event for narration. paragraphs: string[]. */
-    enqueue({ eventId, paragraphs, role, onParagraph, onDone }) {
-      queue.push({ eventId, paragraphs, role, onParagraph, onDone });
+    unlock() {
+      if (unlocked) return;
+      unlocked = true;
+      try {
+        audioEl.src = SILENT_WAV;
+        audioEl.play().catch(() => {});
+        if (synth) {
+          const u = new SpeechSynthesisUtterance(' ');
+          u.volume = 0;
+          synth.speak(u);
+          loadVoices();
+        }
+      } catch {
+        /* no-op */
+      }
+    },
+
+    /** Queue an event for narration. paragraphs: string[]; key varies juror voices. */
+    enqueue({ eventId, paragraphs, role, key, onParagraph, onDone }) {
+      queue.push({ eventId, paragraphs, role, key: key ?? 0, onParagraph, onDone });
       pump();
     },
+
     /** Stop mid-word. Returns {eventId, paragraphIndex} of what was speaking. */
     interrupt() {
       const at = current ? { eventId: current.eventId, paragraphIndex: current.paragraphIndex || 0 } : null;
       queue = [];
       current = null;
+      try {
+        audioEl.pause();
+        audioEl.removeAttribute('src');
+      } catch {
+        /* no-op */
+      }
       if (synth) synth.cancel();
-      speakingNow = false;
+      pumping = false;
       return at;
     },
+
     /** Where narration currently is (for objections while speech continues). */
     position() {
       return current ? { eventId: current.eventId, paragraphIndex: current.paragraphIndex || 0 } : null;
     },
+
     isSpeaking() {
-      return Boolean(current) || (synth && synth.speaking);
+      return Boolean(current) || (!audioEl.paused && !audioEl.ended) || (synth && synth.speaking);
     },
+
     setMuted(m) {
       muted = m;
       if (m) this.interrupt();
     },
+
     get muted() {
       return muted;
     },
