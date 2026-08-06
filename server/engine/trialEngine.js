@@ -209,16 +209,21 @@ async function userStatement(state, caseFile, events, text) {
   screenP.catch(() => {});
   const review = await counselReview(state, caseFile, text, `${state.phase === 'openings' ? 'opening statement' : 'closing argument'}`);
   if (review?.object) {
+    const sEv = userEv(state, caseFile, text, 'statement');
+    push(events, state, sEv);
     const basis = basisById(review.basis);
     push(events, state, counselEv(state, caseFile, `Objection, Your Honor — ${basis ? basis.label.toLowerCase() : review.basis}. ${review.argument || ''}`, 'objection'));
     push(events, state, judgeEv(caseFile, `Counsel, your response to the objection?`));
-    state.pending = { type: 'objection_response', submission: { kind: 'statement', text }, review };
+    state.pending = { type: 'objection_response', submission: { kind: 'statement', text, eventId: sEv.id }, review };
     return;
   }
   await admitUserSubmission(state, caseFile, events, { kind: 'statement', text }, { screenP });
 }
 
 async function admitUserSubmission(state, caseFile, events, submission, pre = {}) {
+  // The submission may already be on the record (it was pushed when an
+  // objection was raised against it) — never push it twice.
+  const already = submission.eventId ? state.record.find((e) => e.id === submission.eventId) : null;
   // 2. Judicial screening — sua sponte control even with no objection.
   const screen = await (pre.screenP || judgeScreen(state, caseFile, submission.text));
   if (screen?.intervene) {
@@ -226,15 +231,16 @@ async function admitUserSubmission(state, caseFile, events, submission, pre = {}
     state.score.admonishments += 1;
     if (screen.block) {
       state.score.stricken += 1;
-      push(events, state, sys('system', 'Your submission was blocked before reaching the jury. Rephrase and resubmit.', { speak: false }));
+      if (already) already.stricken = true;
+      push(events, state, sys('system', 'Your submission was blocked before reaching the jury. Rephrase and resubmit.', { speak: false, strikeTargetId: already?.id }));
       return;
     }
   }
   if (submission.kind === 'statement') {
-    push(events, state, userEv(state, caseFile, submission.text, 'statement'));
+    if (!already) push(events, state, userEv(state, caseFile, submission.text, 'statement'));
     advanceAfterStatement(state, caseFile, events);
   } else if (submission.kind === 'question') {
-    push(events, state, userEv(state, caseFile, submission.text, 'question'));
+    if (!already) push(events, state, userEv(state, caseFile, submission.text, 'question'));
     await witnessAnswers(state, caseFile, events, submission.text, pre.answerP);
   }
 }
@@ -307,10 +313,14 @@ async function userAsks(state, caseFile, events, text) {
   screenP.catch(() => {});
   const review = await counselReview(state, caseFile, text, `question on ${state.exam.stage} examination of ${witnessOf(state, caseFile).name}`);
   if (review?.object) {
+    // The challenged question goes ON THE RECORD before the objection — the
+    // court (and the user) must be able to see exactly what was objected to.
+    const qEv = userEv(state, caseFile, text, 'question');
+    push(events, state, qEv);
     const basis = basisById(review.basis);
     push(events, state, counselEv(state, caseFile, `Objection — ${basis ? basis.label.toLowerCase() : review.basis}. ${review.argument || ''}`, 'objection'));
     push(events, state, judgeEv(caseFile, `Response, counsel?`));
-    state.pending = { type: 'objection_response', submission: { kind: 'question', text }, review };
+    state.pending = { type: 'objection_response', submission: { kind: 'question', text, eventId: qEv.id }, review };
     return;
   }
   await admitUserSubmission(state, caseFile, events, { kind: 'question', text }, { screenP, answerP });
@@ -598,11 +608,13 @@ async function ruleOnAiObjection(state, caseFile, events, pending, userResponse)
     reply: userResponse,
     targetText: pending.submission.text,
   });
-  const r = ruling || fallbackRuling(pending.submission.text);
+  const r = ruling || fallbackRuling();
+  const challenged = pending.submission.eventId ? state.record.find((e) => e.id === pending.submission.eventId) : null;
   if (r.ruling === 'sustained') {
     state.score.aiObjections.sustained += 1;
     state.score.stricken += 1;
-    push(events, state, judgeEv(caseFile, `Sustained. ${r.reasoning || ''}${r.admonishment ? ' ' + r.admonishment : ''}`, { kind: 'ruling' }));
+    if (challenged) challenged.stricken = true; // the blocked words stay visible, struck through
+    push(events, state, judgeEv(caseFile, `Sustained. ${r.reasoning || ''}${r.admonishment ? ' ' + r.admonishment : ''}`, { kind: 'ruling', strikeTargetId: challenged?.id }));
     if (r.admonishment) state.score.admonishments += 1;
     push(events, state, sys('system', pending.submission.kind === 'question' ? 'Your question was blocked before the witness could answer. Rephrase it.' : 'Your statement was blocked before reaching the jury. Rephrase and resubmit.', { speak: false }));
   } else {
@@ -629,10 +641,9 @@ async function judgeObjectionRuling(state, caseFile, { objector, basis, argument
   );
 }
 
-function fallbackRuling(seed) {
-  return hash01(String(seed)) > 0.45
-    ? { ruling: 'sustained', reasoning: 'The objection is well taken on this record.', admonishment: null, instruct_disregard: true }
-    : { ruling: 'overruled', reasoning: 'It goes to weight, not admissibility.', admonishment: null, instruct_disregard: false };
+// When the live judge is unavailable, doubt goes to the proponent.
+function fallbackRuling() {
+  return { ruling: 'overruled', reasoning: 'The court is not persuaded the objection is well taken on this record.', admonishment: null, instruct_disregard: false };
 }
 
 function applyObjectionRuling(state, caseFile, events, { ruling, target, paragraphIndex }) {
