@@ -6,7 +6,7 @@ import { researchCase } from '../research/publicData.js';
 import { buildTranscript } from '../engine/transcript.js';
 import { generateCase, registerGeneratedCase } from '../generator/caseGenerator.js';
 import { buildStrategySheet } from '../engine/strategy.js';
-import { saveTrial, loadTrial } from '../engine/store.js';
+import { saveTrial, loadTrial, deleteTrial, purgeCompleted, storeHealthy } from '../engine/store.js';
 import { synthesize } from '../tts/polly.js';
 import { chat } from '../llm/grokClient.js';
 import { hasLiveModel, providerInfo } from '../llm/grokClient.js';
@@ -18,17 +18,40 @@ const sessions = new Map(); // trialId -> { state, caseFile }
 // what lets a trial survive a server restart or deploy mid-argument.
 function getSession(id) {
   let s = sessions.get(id);
-  if (s) return s;
-  const saved = loadTrial(id);
-  if (!saved || !saved.state || !saved.caseFile) return null;
-  if (!getCase(saved.caseFile.id)) registerGeneratedCase(saved.caseFile);
-  s = { state: saved.state, caseFile: saved.caseFile, strategy: saved.strategy || null };
-  sessions.set(id, s);
+  if (!s) {
+    const saved = loadTrial(id);
+    if (!saved || !saved.state || !saved.caseFile) return null;
+    s = { state: saved.state, caseFile: saved.caseFile, strategy: saved.strategy || null };
+    sessions.set(id, s);
+  }
+  // A generated case can be evicted from its registry while this trial still
+  // runs; re-registering here keeps binder/cleanup/research lookups alive.
+  if (!getCase(s.caseFile.id)) registerGeneratedCase(s.caseFile);
+  s.lastTouch = Date.now();
   return s;
 }
 
+/* Lifecycle sweep — a finished trial is erased (memory + disk) after a grace
+ * hour for transcript download, as if it never existed; idle mid-trial
+ * sessions leave memory (their disk checkpoint remains for resume). */
+const COMPLETED_GRACE_MS = 60 * 60 * 1000;
+const IDLE_EVICT_MS = 2 * 60 * 60 * 1000;
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, s] of sessions) {
+    const idle = now - (s.lastTouch || 0);
+    if (s.state.phase === 'verdict' && idle > COMPLETED_GRACE_MS) {
+      sessions.delete(id);
+      deleteTrial(id);
+    } else if (idle > IDLE_EVICT_MS && !s.busy) {
+      sessions.delete(id); // still on disk; getSession() rehydrates on demand
+    }
+  }
+  purgeCompleted();
+}, 15 * 60 * 1000).unref();
+
 router.get('/health', (_req, res) => {
-  res.json({ ok: true, liveModel: hasLiveModel(), llm: providerInfo(), sessions: sessions.size });
+  res.json({ ok: true, liveModel: hasLiveModel(), llm: providerInfo(), sessions: sessions.size, store: storeHealthy() });
 });
 
 router.get('/cases', (_req, res) => {
@@ -86,7 +109,7 @@ router.post('/trial', (req, res) => {
   if (!caseFile) return res.status(400).json({ error: 'unknown case' });
   if (!['prosecution', 'defense'].includes(side)) return res.status(400).json({ error: 'side must be prosecution or defense' });
   const { state, events } = createTrial(caseFile, side, difficulty);
-  sessions.set(state.id, { state, caseFile });
+  sessions.set(state.id, { state, caseFile, lastTouch: Date.now() });
   saveTrial(sessions.get(state.id));
   res.json({ trialId: state.id, events, state: publicState(state, caseFile) });
 });
@@ -97,22 +120,24 @@ router.post('/cleanup', async (req, res) => {
   const { text, caseId } = req.body || {};
   const raw = String(text || '').trim();
   if (!raw) return res.status(400).json({ error: 'no text' });
-  const c = getCase(caseId);
-  const vocab = c
-    ? [c.parties.defendant, ...c.parties.victims, c.parties.judge, c.parties.prosecutor, c.parties.defenseCounsel,
-       ...c.witnesses.map((w) => w.name)].join('; ')
-    : '';
   try {
+    const c = getCase(caseId);
+    const vocab = c
+      ? [c.parties?.defendant, ...(c.parties?.victims || []), c.parties?.judge, c.parties?.prosecutor, c.parties?.defenseCounsel,
+         ...(c.witnesses || []).map((w) => w.name)].filter(Boolean).join('; ')
+      : '';
     const cleaned = await chat(
       [
         { role: 'system', content: `You repair speech-to-text transcription errors in courtroom utterances spoken by an attorney. Fix ONLY transcription artifacts: homophones ("You're honor" -> "Your Honor"), broken words ("Mis characterizing" -> "mischaracterizing"), wrong articles, missing punctuation, and garbled legal terms (in limine, voir dire, sua sponte, prima facie, Rule 403/404(b)/611/702, foundation, hearsay). Use these case names when the audio clearly meant them: ${vocab}. NEVER change the meaning, add arguments, remove content, or polish style beyond transcription repair. Return ONLY the corrected text, nothing else.` },
         { role: 'user', content: raw },
       ],
-      { temperature: 0.1, effort: 'none', timeoutMs: 15000, mock: () => raw }
+      // Tight budget: hedge early so the answer always beats the client's 15s cutoff.
+      { temperature: 0.1, effort: 'none', timeoutMs: 10000, hedgeDelayMs: 4000, mock: () => raw }
     );
     const out = typeof cleaned === 'string' && cleaned.trim() ? cleaned.trim() : raw;
     // Guardrail: if the model rewrote rather than repaired, keep the original.
-    res.json({ text: out.length > raw.length * 2 || out.length < raw.length * 0.4 ? raw : out });
+    // The +40 slack keeps legitimate expansions of very short utterances.
+    res.json({ text: out.length > raw.length * 2 + 40 || out.length < raw.length * 0.4 ? raw : out });
   } catch {
     res.json({ text: raw });
   }

@@ -115,6 +115,10 @@ async function userResponds(state, caseFile, events, text) {
     push(events, state, sys('system', 'Nothing is pending a response.', { speak: false }));
     return;
   }
+  if (!text?.trim()) {
+    push(events, state, sys('system', 'Say something on the record before the court rules.', { speak: false }));
+    return; // pending stays live
+  }
   state.pending = null;
   if (pending.type === 'motion_response') {
     push(events, state, userEv(state, caseFile, text, 'argument'));
@@ -185,6 +189,10 @@ function applyMotionRuling(state, events, caseFile, motion, ruling) {
 /* ============================== openings & closings ============================== */
 
 async function userStatement(state, caseFile, events, text) {
+  if (state.pending) {
+    push(events, state, sys('system', 'Respond to the pending matter first.', { speak: false }));
+    return;
+  }
   if (state.phase !== 'openings' && state.phase !== 'closings') {
     push(events, state, sys('system', 'Statements are for openings and closings. Use the witness controls during the evidentiary phases.', { speak: false }));
     return;
@@ -283,6 +291,7 @@ async function userCallsWitness(state, caseFile, events, witnessId) {
 
 async function userAsks(state, caseFile, events, text) {
   requireEvidencePhase(state);
+  if (state.pending) { push(events, state, sys('system', 'Respond to the pending objection before asking another question.', { speak: false })); return; }
   if (!state.exam) { push(events, state, sys('system', 'No witness is on the stand.', { speak: false })); return; }
   if (!examinerIsUser(state)) { push(events, state, sys('system', 'You are not the examining attorney right now.', { speak: false })); return; }
   if (!text?.trim()) return;
@@ -322,6 +331,8 @@ async function witnessAnswers(state, caseFile, events, question) {
 async function passWitness(state, caseFile, events) {
   requireEvidencePhase(state);
   if (!state.exam) { push(events, state, sys('system', 'No witness is on the stand.', { speak: false })); return; }
+  if (state.pending) { push(events, state, sys('system', 'Respond to the pending objection before passing the witness.', { speak: false })); return; }
+  if (!examinerIsUser(state)) { push(events, state, sys('system', 'You cannot pass a witness you are not examining.', { speak: false })); return; }
   const exam = state.exam;
   const w = witnessOf(state, caseFile);
   if (exam.stage === 'direct') {
@@ -347,6 +358,7 @@ async function passWitness(state, caseFile, events) {
 async function restCase(state, caseFile, events) {
   requireEvidencePhase(state);
   if (caseSideOf(state) !== state.userSide) { push(events, state, sys('system', 'It is not your case to rest.', { speak: false })); return; }
+  if (state.pending) { push(events, state, sys('system', 'Respond to the pending objection before resting.', { speak: false })); return; }
   if (state.exam) { state.exam = null; }
   push(events, state, userEv(state, caseFile, `Your Honor, the ${state.userSide} rests.`, 'statement'));
   concludeCasePhase(state, caseFile, events);
@@ -529,9 +541,19 @@ async function aiStatement(state, caseFile, kindLabel) {
 /* ============================== objections ============================== */
 
 async function userObjects(state, caseFile, events, action) {
+  if (['pretrial', 'deliberation', 'verdict'].includes(state.phase)) {
+    push(events, state, sys('system', 'There is no objectionable matter before the court in this phase.', { speak: false }));
+    return;
+  }
+  if (state.pending) {
+    push(events, state, sys('system', 'A matter is already pending — respond to it first.', { speak: false }));
+    return;
+  }
   const basis = basisById(action.basis);
   if (!basis) { push(events, state, sys('system', 'Pick a recognized basis for your objection.', { speak: false })); return; }
-  const target = state.record.find((e) => e.id === action.targetEventId) || lastSpeakable(state);
+  // Objections lie against counsel and witnesses — never the court itself.
+  const target = state.record.find((e) => e.id === action.targetEventId && ['ai_counsel', 'witness'].includes(e.actor) && !e.stricken)
+    || lastSpeakable(state);
   if (!target) { push(events, state, sys('system', 'Nothing to object to yet.', { speak: false })); return; }
 
   push(events, state, userEv(state, caseFile, `Objection, Your Honor — ${basis.label.toLowerCase()}. ${action.argument || ''}`, 'objection'));
@@ -786,7 +808,7 @@ function witnessOf(state, caseFile) {
 function lastSpeakable(state) {
   for (let i = state.record.length - 1; i >= 0; i--) {
     const e = state.record[i];
-    if (['ai_counsel', 'witness', 'judge'].includes(e.actor) && !e.stricken) return e;
+    if (['ai_counsel', 'witness'].includes(e.actor) && !e.stricken) return e;
   }
   return null;
 }

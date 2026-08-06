@@ -190,7 +190,10 @@ input[type="range"] { accent-color: var(--brass); width: 100%; }
   margin-top: 6px; color: var(--ink-dim); font-size: 0.78rem;
   border-left: 2px solid var(--brass); padding: 4px 8px;
   max-height: 76px; overflow-y: auto; white-space: pre-wrap;
+  overflow-wrap: break-word; word-break: break-word;
 }
+/* Inside a modal card, labels are display:block — the toggle row must stay flex */
+.modal-card label.toggle-row { display: flex; gap: 8px; align-items: flex-start; }
 
 .center-col { display: flex; flex-direction: column; min-height: 0; gap: 8px; }
 .transcript {
