@@ -1,23 +1,51 @@
 /**
- * Grok (xAI) API client.
+ * Grok API client — two interchangeable providers, one protocol.
  *
- * The xAI API is OpenAI-compatible (POST {base}/chat/completions). The app is
- * designed to run on AWS (see docs/DEPLOY_AWS.md) with the key supplied via
- * environment / AWS Secrets Manager.
+ * Grok 4.3 is reachable through two OpenAI-compatible chat-completions
+ * endpoints, selected with LLM_PROVIDER:
+ *
+ *   xai      — SpaceXAI's native API: https://api.x.ai/v1, key from
+ *              console.x.ai, model "grok-4.3". Supports Live Search.
+ *   bedrock  — AWS-native Amazon Bedrock (bedrock-mantle endpoint):
+ *              https://bedrock-mantle.{region}.api.aws/openai/v1, auth with a
+ *              Bedrock API key (Bedrock console → API keys), model
+ *              "xai.grok-4.3". Available in us-east-1, us-east-2, us-west-2.
  *
  * Every call site passes a `mock` fallback so the whole simulator remains
  * fully playable with no API key (offline demo mode).
  */
 
+const REGION = process.env.AWS_REGION || 'us-east-1';
+const PRESETS = {
+  xai: { baseUrl: 'https://api.x.ai/v1', model: 'grok-4.3' },
+  bedrock: { baseUrl: `https://bedrock-mantle.${REGION}.api.aws/openai/v1`, model: 'xai.grok-4.3' },
+};
+const PROVIDER = (
+  process.env.LLM_PROVIDER ||
+  (process.env.GROK_BASE_URL?.includes('bedrock') ? 'bedrock' : 'xai')
+).toLowerCase();
+const PRESET = PRESETS[PROVIDER] || PRESETS.xai;
+
 const DEFAULTS = {
-  baseUrl: process.env.GROK_BASE_URL || 'https://api.x.ai/v1',
-  model: process.env.GROK_MODEL || 'grok-4',
-  apiKey: process.env.GROK_API_KEY || '',
+  baseUrl: process.env.GROK_BASE_URL || PRESET.baseUrl,
+  model: process.env.GROK_MODEL || PRESET.model,
+  // AWS_BEARER_TOKEN_BEDROCK is the conventional env name for Bedrock API keys.
+  apiKey: process.env.GROK_API_KEY || process.env.AWS_BEARER_TOKEN_BEDROCK || '',
   timeoutMs: Number(process.env.GROK_TIMEOUT_MS || 90000),
 };
 
 export function hasLiveModel() {
   return Boolean(DEFAULTS.apiKey);
+}
+
+export function providerInfo() {
+  return {
+    provider: PROVIDER,
+    model: DEFAULTS.model,
+    baseUrl: DEFAULTS.baseUrl,
+    live: hasLiveModel(),
+    liveSearch: PROVIDER === 'xai' && hasLiveModel(),
+  };
 }
 
 /**
@@ -41,7 +69,9 @@ export async function chat(messages, opts = {}) {
     temperature,
   };
   if (json) body.response_format = { type: 'json_object' };
-  if (search) body.search_parameters = { mode: 'auto', return_citations: true };
+  // search_parameters (Live Search) is a native-xAI extension; Bedrock's
+  // bedrock-mantle endpoint would reject the unknown field.
+  if (search && PROVIDER === 'xai') body.search_parameters = { mode: 'auto', return_citations: true };
 
   let lastErr;
   for (let attempt = 0; attempt < 3; attempt++) {

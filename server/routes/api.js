@@ -3,13 +3,13 @@ import { CASES, getCase, caseSummaries } from '../cases/index.js';
 import { createTrial, handleAction, publicState } from '../engine/trialEngine.js';
 import { OBJECTION_BASES } from '../engine/objections.js';
 import { researchCase } from '../research/publicData.js';
-import { hasLiveModel } from '../llm/grokClient.js';
+import { hasLiveModel, providerInfo } from '../llm/grokClient.js';
 
 const router = Router();
 const sessions = new Map(); // trialId -> { state, caseFile }
 
 router.get('/health', (_req, res) => {
-  res.json({ ok: true, liveModel: hasLiveModel(), sessions: sessions.size });
+  res.json({ ok: true, liveModel: hasLiveModel(), llm: providerInfo(), sessions: sessions.size });
 });
 
 router.get('/cases', (_req, res) => {

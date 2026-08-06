@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import api from './routes/api.js';
-import { hasLiveModel } from './llm/grokClient.js';
+import { hasLiveModel, providerInfo } from './llm/grokClient.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -13,10 +13,11 @@ app.use(express.static(path.join(__dirname, '..', 'client')));
 
 const port = Number(process.env.PORT || 3000);
 app.listen(port, () => {
+  const info = providerInfo();
   console.log(`CourtSim listening on :${port}`);
   console.log(
     hasLiveModel()
-      ? `Grok model: ${process.env.GROK_MODEL || 'grok-4'} via ${process.env.GROK_BASE_URL || 'https://api.x.ai/v1'}`
-      : 'No GROK_API_KEY set — running in offline demo mode (deterministic mock agents).'
+      ? `Grok model: ${info.model} via ${info.provider} (${info.baseUrl})${info.liveSearch ? ' + Live Search' : ''}`
+      : 'No API key set — running in offline demo mode (deterministic mock agents).'
   );
 });

@@ -7,7 +7,7 @@
  * the case file automatically, and it never feeds real-world outcomes into
  * juror-facing material (jurors only ever see the trial record).
  */
-import { chat, hasLiveModel } from '../llm/grokClient.js';
+import { chat, providerInfo } from '../llm/grokClient.js';
 
 export async function researchCase(caseFile) {
   const report = await chat(
@@ -26,8 +26,18 @@ export async function researchCase(caseFile) {
       search: true,
       temperature: 0.2,
       mock: () =>
-        `Live research requires a GROK_API_KEY (xAI Live Search). Offline summary: the case file for "${caseFile.title}" was authored from the public record as of the app's knowledge date. For ongoing matters (${caseFile.status}), re-run this endpoint with an API key configured to pull current filings and reporting.`,
+        `Live research requires an API key. Offline summary: the case file for "${caseFile.title}" was authored from the public record as of the app's knowledge date. For ongoing matters (${caseFile.status}), re-run this endpoint with a key configured to pull current filings and reporting.`,
     }
   );
-  return { live: hasLiveModel(), caseId: caseFile.id, report };
+  const info = providerInfo();
+  return {
+    live: info.live,
+    liveSearch: info.liveSearch,
+    provider: info.provider,
+    note: info.live && !info.liveSearch
+      ? 'Running on Amazon Bedrock: Live Search is a native-SpaceXAI API feature, so this report reflects model knowledge rather than a live web sweep. Point LLM_PROVIDER=xai at console.x.ai for live-sourced research.'
+      : undefined,
+    caseId: caseFile.id,
+    report,
+  };
 }

@@ -1,8 +1,9 @@
 # CourtSim — Attorney Trial Simulator
 
-Practice arguing real cases **end-to-end** against an AI opposing counsel powered by the
-**Grok (xAI) API**, in front of an AI judge who holds you to the rules of evidence, and a
-**blind, deliberating AI jury** that decides only on the record you build.
+Practice arguing real cases **end-to-end** against an AI opposing counsel powered by
+**Grok 4.3** — via **Amazon Bedrock** (AWS-native, `us-east-1`) or the **native SpaceXAI
+API** — in front of an AI judge who holds you to the rules of evidence, and a **blind,
+deliberating AI jury** that decides only on the record you build.
 
 ## What it does
 
@@ -43,9 +44,18 @@ Practice arguing real cases **end-to-end** against an AI opposing counsel powere
 
 ```bash
 npm install
-cp .env.example .env       # add your GROK_API_KEY (from console.x.ai)
+cp .env.example .env       # pick a provider (see below) and add its key
 npm start                  # http://localhost:3000
 ```
+
+Grok 4.3 is reachable through either of two OpenAI-compatible endpoints — pick one in
+`.env` (`LLM_PROVIDER`):
+
+- **`bedrock`** — AWS-native Amazon Bedrock: model `xai.grok-4.3` on the
+  `bedrock-mantle` endpoint (`us-east-1` / `us-east-2` / `us-west-2`), authenticated
+  with a Bedrock API key (`AWS_BEARER_TOKEN_BEDROCK`). Recommended when hosting on AWS.
+- **`xai`** — native SpaceXAI API: model `grok-4.3` at `api.x.ai`, key from
+  console.x.ai (`GROK_API_KEY`). Required only for Live Search case research.
 
 No API key? It runs in **offline demo mode** — deterministic mock agents so the whole
 flow (motions, objections, examinations, deliberation, verdict) is playable for free.
