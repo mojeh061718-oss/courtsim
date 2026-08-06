@@ -85,11 +85,16 @@
         </div>
         <div class="panel dockets">
           <div class="tabs">
-            <button class="tab active" data-tab="witnesses">Witnesses</button>
+            <button class="tab active" data-tab="binder">📓 Binder</button>
+            <button class="tab" data-tab="witnesses">Witnesses</button>
             <button class="tab" data-tab="evidence">Evidence</button>
             <button class="tab" data-tab="motions">Motions</button>
           </div>
-          <div id="tab-witnesses" class="tab-body"></div>
+          <div id="tab-binder" class="tab-body">
+            <input id="binder-search" type="search" placeholder="Search your case notes…" autocomplete="off" />
+            <div id="binder-content"></div>
+          </div>
+          <div id="tab-witnesses" class="tab-body hidden"></div>
           <div id="tab-evidence" class="tab-body hidden"></div>
           <div id="tab-motions" class="tab-body hidden"></div>
         </div>

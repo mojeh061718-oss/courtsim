@@ -37,6 +37,27 @@ router.get('/cases/:id', (req, res) => {
   });
 });
 
+// The trial binder: the complete case file for counsel-table reference —
+// full facts, theories, charge elements, instructions, and witness knowledge
+// (the equivalent of discovery summaries for examination prep).
+router.get('/cases/:id/binder', (req, res) => {
+  const c = getCase(req.params.id);
+  if (!c) return res.status(404).json({ error: 'unknown case' });
+  res.json({
+    id: c.id,
+    title: c.title,
+    caseNumber: c.caseNumber,
+    parties: c.parties,
+    factSummary: c.factSummary,
+    theories: c.theories,
+    charges: c.charges,
+    juryInstructions: c.juryInstructions,
+    witnesses: c.witnesses,
+    evidence: c.evidence,
+    disclaimer: c.disclaimer,
+  });
+});
+
 router.get('/objection-bases', (_req, res) => {
   res.json({ bases: OBJECTION_BASES });
 });
