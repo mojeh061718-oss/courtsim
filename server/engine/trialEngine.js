@@ -726,20 +726,26 @@ async function counselFreeText(state, caseFile, side, task, mock) {
 
 /* ============================== deliberation & verdict ============================== */
 
+/* The jury retires and deliberates IN PRIVATE — round after round — and the
+ * courtroom hears nothing until they return with a verdict (or hang). The
+ * full round-by-round discussion and ballots live only in the deliberation
+ * log, which surfaces after the verdict as the transcript's juror sheet —
+ * expressly outside the official record, exactly like real life except the
+ * user gets to peek afterward. */
 async function deliberate(state, caseFile, events) {
   if (state.phase !== 'deliberation') { push(events, state, sys('system', 'The jury is not out.', { speak: false })); return; }
-  const round = await runDeliberationRound(state, caseFile, jurorFacingRecord(state, caseFile));
-  for (const m of round.messages) {
-    push(events, state, { id: nextId(), actor: 'juror', name: `Juror ${m.seat} — ${m.name}`, side: null, text: m.statement, kind: 'deliberation', speak: true, jurorOnly: true });
+  push(events, state, sys('clerk', `The jury retires to the jury room to deliberate. The courtroom stands at ease.`, { speak: true }));
+  const record = jurorFacingRecord(state, caseFile);
+  while (!state.deliberation.verdict) {
+    const round = await runDeliberationRound(state, caseFile, record);
+    if (!round.done && state.deliberation.round === CONFIG.maxDelibRounds - 1) {
+      // The panel reports it is struggling; the court gives the Allen charge.
+      push(events, state, sys('clerk', `The jury sends a note: they are having difficulty reaching unanimity. The court brings them in.`, { speak: false }));
+      push(events, state, judgeEv(caseFile, `Members of the jury, I urge you to continue deliberating with open minds and to re-examine your own views — but no juror should surrender an honest conviction merely to return a verdict. Please resume your deliberations.`, { kind: 'instructions' }));
+    }
   }
-  push(events, state, sys('system', `Round ${state.deliberation.round} tally: ${formatTally(round.tally, caseFile)}`, { speak: false }));
-
-  if (!round.done && state.deliberation.round === CONFIG.maxDelibRounds - 1) {
-    push(events, state, judgeEv(caseFile, `Members of the jury, I urge you to continue deliberating with open minds and to re-examine your own views — but no juror should surrender an honest conviction merely to return a verdict.`, { kind: 'instructions' }));
-  }
-  if (round.done) {
-    await deliverVerdict(state, caseFile, events);
-  }
+  push(events, state, sys('system', `The jury deliberated for ${state.deliberation.round} round${state.deliberation.round === 1 ? '' : 's'}. Their discussion is sealed from the courtroom — the full round-by-round deliberation sheet and ballots are appended to your transcript.`, { speak: false }));
+  await deliverVerdict(state, caseFile, events);
 }
 
 async function deliverVerdict(state, caseFile, events) {
