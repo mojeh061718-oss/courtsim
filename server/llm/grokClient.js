@@ -71,10 +71,23 @@ export function providerInfo() {
  */
 export async function chat(messages, opts = {}) {
   const { json = false, temperature = 0.7, mock } = opts;
-  if (!DEFAULTS.apiKey) return mock ? mock() : null;
+  // Per-call provider override (opts.provider) lets latency-critical calls
+  // route to whichever endpoint is healthier — e.g. case generation on the
+  // native API while the courtroom runs on Bedrock. Falls back to the
+  // session default when the requested provider has no key.
+  const prov =
+    opts.provider === 'xai' && NATIVE_KEY ? 'xai'
+    : opts.provider === 'bedrock' && process.env.AWS_BEARER_TOKEN_BEDROCK ? 'bedrock'
+    : null;
+  const baseUrl = prov ? PRESETS[prov].baseUrl : DEFAULTS.baseUrl;
+  const model = opts.model || (prov ? PRESETS[prov].model : DEFAULTS.model);
+  const apiKey = prov ? (prov === 'xai' ? NATIVE_KEY : KEYS.bedrock) : DEFAULTS.apiKey;
+  if (!apiKey) return mock ? mock() : null;
+  const timeoutMs = opts.timeoutMs || DEFAULTS.timeoutMs;
+  const attempts = opts.attempts || 3;
 
   const body = {
-    model: opts.model || DEFAULTS.model,
+    model,
     messages,
     temperature,
   };
@@ -82,18 +95,18 @@ export async function chat(messages, opts = {}) {
   // Grok 4.3's always-on reasoning can be dialed down per call (opts.effort:
   // 'none'|'low'|'medium'|'high') — big latency win for creative/mechanical
   // calls. Verified on bedrock-mantle; guarded there to avoid rejects elsewhere.
-  if (opts.effort && PROVIDER === 'bedrock') body.reasoning_effort = opts.effort;
+  if (opts.effort && (prov || PROVIDER) === 'bedrock') body.reasoning_effort = opts.effort;
 
   let lastErr;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     try {
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), DEFAULTS.timeoutMs);
-      const res = await fetch(`${DEFAULTS.baseUrl}/chat/completions`, {
+      const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+      const res = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${DEFAULTS.apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify(body),
         signal: ctrl.signal,
