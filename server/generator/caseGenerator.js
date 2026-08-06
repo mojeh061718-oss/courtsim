@@ -50,11 +50,17 @@ export async function generateCase({ theme, difficulty }) {
   if (caseFile.fallback) {
     caseFile.status += ' — LIVE GENERATION UNAVAILABLE; this is a stock training case';
   }
+  registerGeneratedCase(caseFile);
+  return caseFile;
+}
+
+// Also used to re-register a generated case rehydrated from a saved trial
+// after a server restart, so binder/cleanup/research lookups keep working.
+export function registerGeneratedCase(caseFile) {
   if (registry.size >= MAX_GENERATED) {
     registry.delete(registry.keys().next().value);
   }
   registry.set(caseFile.id, caseFile);
-  return caseFile;
 }
 
 const GENERATOR_SYSTEM = `You are a master case-file author for a mock-trial training simulator used by practicing attorneys. You invent ENTIRELY FICTIONAL American murder cases: fictional defendants, victims, witnesses, towns, and dockets. Never base the case on a real crime, real person, or recognizable news story. The file must be internally consistent: every exhibit corroborated by at least one witness's knowledge, every witness's knowledge consistent with the fact summary, and both sides given real material to work with. Write in the professional register of a trial-preparation binder. Respond with ONLY a valid JSON object — no markdown, no commentary.`;

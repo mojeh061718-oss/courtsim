@@ -1,5 +1,15 @@
 /* CourtSim client — courtroom UI, flow control, objection hotkey. */
 (function () {
+  // One-time fresh start for this release: wipe all locally stored state
+  // (old trial pointers, old settings) so the app opens like a first install.
+  const SCHEMA = 'courtsim-2026-08-06-v18';
+  try {
+    if (localStorage.getItem('courtsim-schema') !== SCHEMA) {
+      localStorage.clear();
+      localStorage.setItem('courtsim-schema', SCHEMA);
+    }
+  } catch { /* storage unavailable — nothing to wipe */ }
+
   const $ = (sel) => document.querySelector(sel);
   const el = (tag, cls, text) => {
     const n = document.createElement(tag);
@@ -60,6 +70,67 @@
     S.bases = bases;
     renderCaseList();
     fillBasisSelect();
+    await tryResume();
+  }
+
+  /* ================= auto save / resume ================= */
+  // The server checkpoints the trial after every action; the client only needs
+  // to remember WHICH trial is active. On open, we rejoin it at the exact spot.
+
+  const ACTIVE_KEY = 'courtsim-active';
+
+  function saveActive() {
+    if (!S.trialId || !S.state) return;
+    if (S.state.phase === 'verdict') return localStorage.removeItem(ACTIVE_KEY);
+    try {
+      localStorage.setItem(ACTIVE_KEY, JSON.stringify({ trialId: S.trialId, caseId: S.selectedCase.id, title: S.selectedCase.title, ts: Date.now() }));
+    } catch { /* storage full/blocked — resume just won't be available */ }
+  }
+
+  async function tryResume() {
+    let ptr = null;
+    try { ptr = JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null'); } catch { ptr = null; }
+    if (!ptr || !ptr.trialId) return;
+    let r;
+    try {
+      r = await api('/trial/' + ptr.trialId, { timeoutMs: 20000 });
+    } catch {
+      localStorage.removeItem(ACTIVE_KEY); // trial no longer on the server
+      return;
+    }
+    if (!r || !r.state || r.state.phase === 'verdict') return localStorage.removeItem(ACTIVE_KEY);
+    try {
+      S.selectedCase = await api('/cases/' + ptr.caseId);
+      S.trialId = ptr.trialId;
+      S.state = r.state;
+      S.pretrialDone = r.state.phase !== 'pretrial';
+      S.strategy = null;
+      S.strategyLoading = false;
+      $('#strategy-content').innerHTML = '';
+      $('#screen-select').classList.add('hidden');
+      $('#screen-court').classList.remove('hidden');
+      $('#hdr-case').textContent = S.selectedCase.title;
+      renderJury();
+      renderDockets();
+      loadBinder();
+      // Replay the record silently — rebuild every line, speak none of it.
+      $('#transcript').innerHTML = '';
+      for (const ev of r.record || []) {
+        if (ev.meta?.strikeTargetId) applyStrike(ev.meta.strikeTargetId, ev.meta.strikeParagraph);
+        renderEvent(ev);
+        if (ev.speak && ['ai_counsel', 'witness'].includes(ev.actor)) S.lastSpokenTarget = { eventId: ev.id };
+      }
+      renderControls();
+      maybeAutoAdvance();
+    } catch (err) {
+      // Never leave a half-restored courtroom: back to a clean case list.
+      localStorage.removeItem(ACTIVE_KEY);
+      S.trialId = null;
+      S.state = null;
+      $('#screen-court').classList.add('hidden');
+      $('#screen-select').classList.remove('hidden');
+      console.warn('resume failed', err);
+    }
   }
 
   /* ================= case selection ================= */
@@ -177,6 +248,9 @@
   };
 
   async function startTrial(side) {
+    // New generation: any response still in flight for the previous trial
+    // (auto-advance, strategy fetch) is discarded when it lands.
+    S.gen = (S.gen || 0) + 1;
     const r = await api('/trial', {
       method: 'POST',
       body: JSON.stringify({ caseId: S.selectedCase.id, side, difficulty: Number($('#side-difficulty').value) }),
@@ -186,10 +260,17 @@
     S.pretrialDone = false;
     S.strategy = null;
     S.strategyLoading = false;
+    S.lastSpokenTarget = null;
+    S.objectionTarget = null;
     $('#strategy-content').innerHTML = '';
+    // Fresh courtroom whether this is a first trial or a restart.
+    CourtSpeech.interrupt();
+    $('#transcript').innerHTML = '';
+    $('#verdict-banner').classList.add('hidden');
     $('#screen-select').classList.add('hidden');
     $('#screen-court').classList.remove('hidden');
     $('#hdr-case').textContent = S.selectedCase.title;
+    saveActive();
     renderJury();
     renderDockets();
     loadBinder();
@@ -451,6 +532,7 @@
   async function loadStrategy() {
     if (S.strategy || S.strategyLoading || !S.trialId) return;
     S.strategyLoading = true;
+    const gen = S.gen || 0; // a restart mid-fetch discards this response
     const root = $('#strategy-content');
     root.innerHTML = '';
     const status = el('div', 'strategy-status', 'Your team is around the table…');
@@ -460,9 +542,11 @@
     const ticker = setInterval(() => { status.textContent = lines[Math.min(++i, lines.length - 1)]; }, 9000);
     try {
       const r = await api(`/trial/${S.trialId}/strategy`, { method: 'POST', body: '{}', timeoutMs: 200000 });
+      if ((S.gen || 0) !== gen) return; // stale — a new trial owns the tab now
       S.strategy = r.strategy;
       renderStrategy();
     } catch (err) {
+      if ((S.gen || 0) !== gen) return;
       root.innerHTML = '';
       const retry = el('button', 'btn ghost', 'Prep session failed — tap to try again');
       retry.onclick = () => { S.strategyLoading = false; loadStrategy(); };
@@ -602,6 +686,7 @@
         input.placeholder = 'Your Honor, the objection should be overruled because…';
         hint.textContent = 'Argue against the objection, then the court rules.';
       }
+      syncWarDock(); // the dock must show the pending matter too
       return;
     }
 
@@ -700,6 +785,7 @@
   async function send(action) {
     if (S.busy) return;
     S.busy = true;
+    const gen = S.gen || 0; // discard the response if the trial is restarted mid-flight
     $('#btn-send').disabled = true;
     $('#btn-war-send').disabled = true;
     // Visible heartbeat while the court works — no more silent waits.
@@ -712,11 +798,13 @@
     }, 1000);
     try {
       const r = await api(`/trial/${S.trialId}/action`, { method: 'POST', body: JSON.stringify(action) });
+      if ((S.gen || 0) !== gen) return; // trial was restarted while this was in flight
       S.state = r.state;
+      saveActive();
       ingestEvents(r.events);
       renderControls();
     } catch (err) {
-      showError(err.message);
+      if ((S.gen || 0) === gen) showError(err.message);
     } finally {
       clearInterval(S._workTimer);
       S.busy = false;
@@ -743,23 +831,33 @@
   // srcInput lets the war-room dock feed the exact same pipeline as the
   // main court box — cleanup, routing, and pending-response handling included.
   async function sendText(srcInput) {
+    if (S.busy || S.sending) return showError('The court is still handling your last action.');
+    if (modalOpen()) return; // never submit behind an open modal
     const input = srcInput || $('#input-text');
-    let text = input.value.trim();
-    if (!text) return;
-    text = await cleanDictation(text);
-    const st = S.state;
-    let action = null;
-    if (st.pending) action = { type: 'respond', text };
-    else if (st.phase === 'pretrial') action = { type: 'file_motion', text };
-    else if (st.phase === 'openings' || st.phase === 'closings') {
-      const turn = st.phase === 'openings' ? st.openingTurn : st.closingTurn;
-      if (turn === st.userSide) action = { type: 'statement', text };
-    } else if ((st.phase === 'prosecution_case' || st.phase === 'defense_case') && st.exam?.examinerIsUser) {
-      action = { type: 'ask', text };
+    const rawText = input.value.trim();
+    if (!rawText) return;
+    S.sending = true;
+    input.value = ''; // clear NOW so edits during cleanup can't be destroyed
+    try {
+      const text = await cleanDictation(rawText);
+      const st = S.state;
+      let action = null;
+      if (st.pending) action = { type: 'respond', text };
+      else if (st.phase === 'pretrial') action = { type: 'file_motion', text };
+      else if (st.phase === 'openings' || st.phase === 'closings') {
+        const turn = st.phase === 'openings' ? st.openingTurn : st.closingTurn;
+        if (turn === st.userSide) action = { type: 'statement', text };
+      } else if ((st.phase === 'prosecution_case' || st.phase === 'defense_case') && st.exam?.examinerIsUser) {
+        action = { type: 'ask', text };
+      }
+      if (!action) {
+        input.value = rawText; // give their words back
+        return showError('The court is not waiting on text from you right now.');
+      }
+      await send(action);
+    } finally {
+      S.sending = false;
     }
-    if (!action) return showError('The court is not waiting on text from you right now.');
-    input.value = '';
-    send(action);
   }
 
   $('#btn-send').onclick = () => sendText();
@@ -773,14 +871,19 @@
 
   function syncWarDock() {
     if ($('#war-dock').classList.contains('hidden')) return;
-    $('#war-hint').textContent = $('#control-hint').textContent;
+    // While something is pending (an objection against you, a motion needing
+    // response), the banner text is the critical context — mirror it too.
+    const banner = $('#pending-banner');
+    const bannerText = banner.classList.contains('hidden') ? '' : banner.textContent;
+    $('#war-hint').textContent = bannerText ? `⚠️ ${bannerText}` : $('#control-hint').textContent;
     $('#war-input').placeholder = $('#input-text').placeholder;
     const evs = document.querySelectorAll('#transcript .ev');
     const last = evs[evs.length - 1];
     const box = $('#war-last');
     if (last) {
       const who = last.querySelector('.who')?.textContent || '';
-      const bubble = last.querySelector('.bubble')?.textContent || last.textContent || '';
+      const paras = [...last.querySelectorAll('.bubble p')].map((p) => p.textContent);
+      const bubble = paras.length ? paras.join(' ') : (last.querySelector('.bubble')?.textContent || last.textContent || '');
       box.textContent = (who ? who + ' — ' : '') + bubble.trim();
       box.classList.remove('hidden');
     } else {
@@ -989,6 +1092,13 @@
   }
   initSettingsUI();
   initWarDock();
+
+  $('#btn-restart').onclick = () => {
+    if (!S.selectedCase || !S.state) return;
+    if (!confirm('Restart this trial from the beginning? The current record will be discarded.')) return;
+    clearTimeout(S._autoTimer);
+    startTrial(S.state.userSide).catch((err) => showError('Could not restart: ' + err.message));
+  };
 
   $('#btn-settings').onclick = () => {
     clearTimeout(S._autoTimer);

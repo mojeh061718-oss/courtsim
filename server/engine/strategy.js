@@ -12,21 +12,53 @@ const str = (v, max = 600) => String(v == null ? '' : v).trim().slice(0, max);
 const arr = (v, max = 12) => (Array.isArray(v) ? v.map((x) => str(x)).filter(Boolean).slice(0, max) : []);
 const arr0 = (v) => (Array.isArray(v) ? v : []);
 
+// Loose name key: lowercase, drop titles and punctuation, so "Det. Paula
+// Reyes" and "Detective Paula Reyes" resolve to the same case-file witness.
+const nameKey = (n) => String(n || '').toLowerCase().replace(/\b(dr|det|detective|sgt|sergeant|officer|ofc|mr|mrs|ms|miss|hon|judge|prof|professor)\.?\s+/g, '').replace(/[^a-z\s]/g, '').replace(/\s+/g, ' ').trim();
+
 function normalize(rawSheet, caseFile, side) {
   const s = rawSheet && typeof rawSheet === 'object' ? rawSheet : {};
-  const byName = new Map(caseFile.witnesses.map((w) => [w.name.toLowerCase(), w]));
-  const witnesses = arr0(s.witnesses).map((w) => {
-    const known = byName.get(str(w?.name).toLowerCase());
-    return {
-      name: known ? known.name : str(w?.name, 80),
-      side: known ? known.side : (w?.side === 'defense' ? 'defense' : 'prosecution'),
-      mine: known ? known.side === side : w?.side === side,
+  const byKey = new Map();
+  for (const w of caseFile.witnesses) {
+    byKey.set(nameKey(w.name), w);
+    const last = nameKey(w.name).split(' ').pop();
+    if (last && !byKey.has(last)) byKey.set(last, w);
+  }
+  const seen = new Set();
+  const witnesses = [];
+  for (const w of arr0(s.witnesses)) {
+    const key = nameKey(w?.name);
+    const known = byKey.get(key) || byKey.get(key.split(' ').pop() || '');
+    const finalName = known ? known.name : str(w?.name, 80);
+    if (!finalName || seen.has(finalName)) continue; // dedupe LLM repeats
+    seen.add(finalName);
+    const wSide = known ? known.side : (String(w?.side || '').toLowerCase() === 'defense' ? 'defense' : 'prosecution');
+    witnesses.push({
+      name: finalName,
+      side: wSide,
+      mine: wSide === side,
       approach: str(w?.approach, 300),
       goals: arr(w?.goals, 5),
       questions: arr(w?.questions, 7),
       watchOut: str(w?.watchOut, 300),
-    };
-  }).filter((w) => w.name);
+    });
+  }
+  // Backfill any case-file witness the model skipped, so the sheet always
+  // covers the full roster.
+  for (const w of caseFile.witnesses) {
+    if (seen.has(w.name)) continue;
+    witnesses.push({
+      name: w.name,
+      side: w.side,
+      mine: w.side === side,
+      approach: w.side === side
+        ? 'Direct examination — open-ended questions, let the witness tell the story'
+        : 'Cross examination — short leading questions, one fact per question',
+      goals: [str(w.knowledge, 220)],
+      questions: [],
+      watchOut: str(w.demeanor, 200),
+    });
+  }
   return {
     side,
     themes: arr(s.themes, 4),

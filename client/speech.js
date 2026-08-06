@@ -20,6 +20,8 @@
   let current = null; // { eventId, paragraphIndex, role, ... }
   let pumping = false;
   let unlocked = false;
+  let gen = 0; // bumped by interrupt(); a pump from an older generation must die
+  let settleCurrent = null; // resolver of the in-flight playBlob, so interrupt() can end it
 
   const audioEl = new Audio();
   audioEl.preload = 'auto';
@@ -68,11 +70,13 @@
     return new Promise((resolve) => {
       const url = URL.createObjectURL(blob);
       const done = () => {
+        if (settleCurrent === done) settleCurrent = null;
         audioEl.removeEventListener('ended', done);
         audioEl.removeEventListener('error', done);
         URL.revokeObjectURL(url);
         resolve();
       };
+      settleCurrent = done;
       audioEl.addEventListener('ended', done);
       audioEl.addEventListener('error', done);
       audioEl.src = url;
@@ -119,7 +123,9 @@
   async function pump() {
     if (pumping) return;
     pumping = true;
+    const myGen = gen;
     while (queue.length) {
+      if (gen !== myGen) return; // interrupted — the queue belongs to a newer pump now
       const item = queue.shift();
       current = item;
       // Prefetch: fire the first two paragraph requests immediately.
@@ -143,16 +149,18 @@
         }
         if (muted) continue;
         const blob = await item.blobs[i];
+        if (gen !== myGen) return;
         if (current !== item) break;
         if (blob) await playBlob(blob);
         else await speakFallback(item.paragraphs[i], item.role);
+        if (gen !== myGen) return;
       }
       if (current === item) {
         current = null;
         if (item.onDone) item.onDone(item.eventId);
       }
     }
-    pumping = false;
+    if (gen === myGen) pumping = false;
   }
 
   window.CourtSpeech = {
@@ -198,14 +206,17 @@
     /** Stop mid-word. Returns {eventId, paragraphIndex} of what was speaking. */
     interrupt() {
       const at = current ? { eventId: current.eventId, paragraphIndex: current.paragraphIndex || 0 } : null;
+      gen++; // any pump parked on an await is now stale and will exit on wake
       queue = [];
       current = null;
       try {
         audioEl.pause();
         audioEl.removeAttribute('src');
+        audioEl.load();
       } catch {
         /* no-op */
       }
+      if (settleCurrent) settleCurrent(); // end the in-flight playback promise NOW
       if (synth) synth.cancel();
       pumping = false;
       return at;
