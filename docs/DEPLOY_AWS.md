@@ -22,7 +22,25 @@ one env var (`LLM_PROVIDER`):
 native SpaceXAI key configured only if you want the web-search case-refresh feature
 (`POST /api/research/:caseId`); everything else is identical.
 
-## Option A — AWS App Runner (recommended: simplest)
+## Option 0 — GitHub Actions (automated; recommended)
+
+`.github/workflows/deploy.yml` runs on every push to `main`: it plays a full offline
+trial as a smoke test, then builds the Docker image, pushes it to ECR, and
+creates/updates an **App Runner** service in `us-east-1`. The deploy job skips itself
+(clearly labeled, main stays green) until these **Actions repo secrets** exist
+(Settings → Secrets and variables → Actions):
+
+| Secret | What it is |
+|---|---|
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | An IAM user/role with ECR + App Runner permissions |
+| `APP_RUNNER_ECR_ROLE_ARN` | An IAM role App Runner assumes to pull from ECR — create with the managed policy `AWSAppRunnerServicePolicyForECRAccess` (trust principal `build.apprunner.amazonaws.com`) |
+| `AWS_BEARER_TOKEN_BEDROCK` | Your Bedrock API key (courtroom inference) |
+| `GROK_API_KEY` | Your native SpaceXAI key (web-search research) |
+
+Add the five secrets, re-run the workflow (or push to main), and the job prints the
+service URL at the end. Subsequent pushes redeploy automatically.
+
+## Option A — AWS App Runner (manual, no Actions)
 
 1. Build and push the image:
    ```bash
