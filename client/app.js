@@ -667,6 +667,7 @@
     }
     refreshWitnessCallability();
     renderMotions();
+    syncWarDock();
   }
 
   function showVerdict() {
@@ -700,12 +701,14 @@
     if (S.busy) return;
     S.busy = true;
     $('#btn-send').disabled = true;
+    $('#btn-war-send').disabled = true;
     // Visible heartbeat while the court works — no more silent waits.
     const hint = $('#control-hint');
     const t0 = Date.now();
     clearInterval(S._workTimer);
     S._workTimer = setInterval(() => {
       hint.textContent = `⚖️ The court is working… ${Math.round((Date.now() - t0) / 1000)}s`;
+      if (!$('#war-dock').classList.contains('hidden')) $('#war-hint').textContent = hint.textContent;
     }, 1000);
     try {
       const r = await api(`/trial/${S.trialId}/action`, { method: 'POST', body: JSON.stringify(action) });
@@ -718,6 +721,7 @@
       clearInterval(S._workTimer);
       S.busy = false;
       $('#btn-send').disabled = false;
+      $('#btn-war-send').disabled = false;
       renderControls();
     }
   }
@@ -736,8 +740,10 @@
     }
   }
 
-  async function sendText() {
-    const input = $('#input-text');
+  // srcInput lets the war-room dock feed the exact same pipeline as the
+  // main court box — cleanup, routing, and pending-response handling included.
+  async function sendText(srcInput) {
+    const input = srcInput || $('#input-text');
     let text = input.value.trim();
     if (!text) return;
     text = await cleanDictation(text);
@@ -756,10 +762,48 @@
     send(action);
   }
 
-  $('#btn-send').onclick = sendText;
+  $('#btn-send').onclick = () => sendText();
   $('#input-text').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendText();
   });
+
+  /* ============ war-room court dock ============ */
+  // Lets the user address the court while reading their strategy sheet,
+  // mirroring the main controls' hint, placeholder, and the court's last word.
+
+  function syncWarDock() {
+    if ($('#war-dock').classList.contains('hidden')) return;
+    $('#war-hint').textContent = $('#control-hint').textContent;
+    $('#war-input').placeholder = $('#input-text').placeholder;
+    const evs = document.querySelectorAll('#transcript .ev');
+    const last = evs[evs.length - 1];
+    const box = $('#war-last');
+    if (last) {
+      const who = last.querySelector('.who')?.textContent || '';
+      const bubble = last.querySelector('.bubble')?.textContent || last.textContent || '';
+      box.textContent = (who ? who + ' — ' : '') + bubble.trim();
+      box.classList.remove('hidden');
+    } else {
+      box.classList.add('hidden');
+    }
+  }
+
+  function initWarDock() {
+    const cb = $('#war-speak');
+    const dock = $('#war-dock');
+    cb.checked = window.CourtSettings.warSpeak === true;
+    dock.classList.toggle('hidden', !cb.checked);
+    cb.onchange = () => {
+      window.CourtSettings.warSpeak = cb.checked;
+      saveSettings();
+      dock.classList.toggle('hidden', !cb.checked);
+      syncWarDock();
+    };
+    $('#btn-war-send').onclick = () => sendText($('#war-input'));
+    $('#war-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendText($('#war-input'));
+    });
+  }
 
   /* ================= auto-advance ================= */
 
@@ -890,7 +934,7 @@
     { id: 'Kimberly', label: 'Kimberly — bright, engaged (F)' },
     { id: 'Salli', label: 'Salli — light, quick (F)' },
   ];
-  const DEFAULT_SETTINGS = { speed: 1, judge: 'Matthew', counsel: 'Stephen', clerk: 'Joanna', witnessM: 'Gregory', witnessF: 'Ruth', cleanup: true };
+  const DEFAULT_SETTINGS = { speed: 1, judge: 'Matthew', counsel: 'Stephen', clerk: 'Joanna', witnessM: 'Gregory', witnessF: 'Ruth', cleanup: true, warSpeak: false };
 
   function loadSettings() {
     try {
@@ -944,6 +988,7 @@
     };
   }
   initSettingsUI();
+  initWarDock();
 
   $('#btn-settings').onclick = () => {
     clearTimeout(S._autoTimer);
