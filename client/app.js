@@ -60,6 +60,57 @@
     S.bases = bases;
     renderCaseList();
     fillBasisSelect();
+    await tryResume();
+  }
+
+  /* ================= auto save / resume ================= */
+  // The server checkpoints the trial after every action; the client only needs
+  // to remember WHICH trial is active. On open, we rejoin it at the exact spot.
+
+  const ACTIVE_KEY = 'courtsim-active';
+
+  function saveActive() {
+    if (!S.trialId || !S.state) return;
+    if (S.state.phase === 'verdict') return localStorage.removeItem(ACTIVE_KEY);
+    try {
+      localStorage.setItem(ACTIVE_KEY, JSON.stringify({ trialId: S.trialId, caseId: S.selectedCase.id, title: S.selectedCase.title, ts: Date.now() }));
+    } catch { /* storage full/blocked — resume just won't be available */ }
+  }
+
+  async function tryResume() {
+    let ptr = null;
+    try { ptr = JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null'); } catch { ptr = null; }
+    if (!ptr || !ptr.trialId) return;
+    let r;
+    try {
+      r = await api('/trial/' + ptr.trialId, { timeoutMs: 20000 });
+    } catch {
+      localStorage.removeItem(ACTIVE_KEY); // trial no longer on the server
+      return;
+    }
+    if (!r || !r.state || r.state.phase === 'verdict') return localStorage.removeItem(ACTIVE_KEY);
+    S.selectedCase = await api('/cases/' + ptr.caseId);
+    S.trialId = ptr.trialId;
+    S.state = r.state;
+    S.pretrialDone = r.state.phase !== 'pretrial';
+    S.strategy = null;
+    S.strategyLoading = false;
+    $('#strategy-content').innerHTML = '';
+    $('#screen-select').classList.add('hidden');
+    $('#screen-court').classList.remove('hidden');
+    $('#hdr-case').textContent = S.selectedCase.title;
+    renderJury();
+    renderDockets();
+    loadBinder();
+    // Replay the record silently — rebuild every line, speak none of it.
+    $('#transcript').innerHTML = '';
+    for (const ev of r.record || []) {
+      if (ev.meta?.strikeTargetId) applyStrike(ev.meta.strikeTargetId, ev.meta.strikeParagraph);
+      renderEvent(ev);
+      if (ev.speak && ['ai_counsel', 'witness'].includes(ev.actor)) S.lastSpokenTarget = { eventId: ev.id };
+    }
+    renderControls();
+    maybeAutoAdvance();
   }
 
   /* ================= case selection ================= */
@@ -187,9 +238,14 @@
     S.strategy = null;
     S.strategyLoading = false;
     $('#strategy-content').innerHTML = '';
+    // Fresh courtroom whether this is a first trial or a restart.
+    CourtSpeech.interrupt();
+    $('#transcript').innerHTML = '';
+    $('#verdict-banner').classList.add('hidden');
     $('#screen-select').classList.add('hidden');
     $('#screen-court').classList.remove('hidden');
     $('#hdr-case').textContent = S.selectedCase.title;
+    saveActive();
     renderJury();
     renderDockets();
     loadBinder();
@@ -713,6 +769,7 @@
     try {
       const r = await api(`/trial/${S.trialId}/action`, { method: 'POST', body: JSON.stringify(action) });
       S.state = r.state;
+      saveActive();
       ingestEvents(r.events);
       renderControls();
     } catch (err) {
@@ -989,6 +1046,13 @@
   }
   initSettingsUI();
   initWarDock();
+
+  $('#btn-restart').onclick = () => {
+    if (!S.selectedCase || !S.state) return;
+    if (!confirm('Restart this trial from the beginning? The current record will be discarded.')) return;
+    clearTimeout(S._autoTimer);
+    startTrial(S.state.userSide).catch((err) => showError('Could not restart: ' + err.message));
+  };
 
   $('#btn-settings').onclick = () => {
     clearTimeout(S._autoTimer);

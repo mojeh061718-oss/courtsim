@@ -4,14 +4,28 @@ import { createTrial, handleAction, publicState } from '../engine/trialEngine.js
 import { OBJECTION_BASES } from '../engine/objections.js';
 import { researchCase } from '../research/publicData.js';
 import { buildTranscript } from '../engine/transcript.js';
-import { generateCase } from '../generator/caseGenerator.js';
+import { generateCase, registerGeneratedCase } from '../generator/caseGenerator.js';
 import { buildStrategySheet } from '../engine/strategy.js';
+import { saveTrial, loadTrial } from '../engine/store.js';
 import { synthesize } from '../tts/polly.js';
 import { chat } from '../llm/grokClient.js';
 import { hasLiveModel, providerInfo } from '../llm/grokClient.js';
 
 const router = Router();
 const sessions = new Map(); // trialId -> { state, caseFile }
+
+// Look up a live session, falling back to the on-disk checkpoint — this is
+// what lets a trial survive a server restart or deploy mid-argument.
+function getSession(id) {
+  let s = sessions.get(id);
+  if (s) return s;
+  const saved = loadTrial(id);
+  if (!saved || !saved.state || !saved.caseFile) return null;
+  if (!getCase(saved.caseFile.id)) registerGeneratedCase(saved.caseFile);
+  s = { state: saved.state, caseFile: saved.caseFile, strategy: saved.strategy || null };
+  sessions.set(id, s);
+  return s;
+}
 
 router.get('/health', (_req, res) => {
   res.json({ ok: true, liveModel: hasLiveModel(), llm: providerInfo(), sessions: sessions.size });
@@ -73,6 +87,7 @@ router.post('/trial', (req, res) => {
   if (!['prosecution', 'defense'].includes(side)) return res.status(400).json({ error: 'side must be prosecution or defense' });
   const { state, events } = createTrial(caseFile, side, difficulty);
   sessions.set(state.id, { state, caseFile });
+  saveTrial(sessions.get(state.id));
   res.json({ trialId: state.id, events, state: publicState(state, caseFile) });
 });
 
@@ -133,13 +148,14 @@ router.post('/generate-case', async (req, res) => {
 // Cached per trial. Never enters the record, the transcript, or any AI
 // actor's context — the court cannot see it and it affects nothing.
 router.post('/trial/:id/strategy', async (req, res) => {
-  const s = sessions.get(req.params.id);
+  const s = getSession(req.params.id);
   if (!s) return res.status(404).json({ error: 'unknown trial' });
   if (s.strategy) return res.json({ strategy: s.strategy, cached: true });
   if (s.strategyBusy) return res.status(429).json({ error: 'your team is still drafting the sheet' });
   s.strategyBusy = true;
   try {
     s.strategy = await buildStrategySheet(s.caseFile, s.state.userSide);
+    saveTrial(s);
     res.json({ strategy: s.strategy, cached: false });
   } catch (err) {
     console.error('[strategy]', err);
@@ -150,18 +166,19 @@ router.post('/trial/:id/strategy', async (req, res) => {
 });
 
 router.get('/trial/:id', (req, res) => {
-  const s = sessions.get(req.params.id);
+  const s = getSession(req.params.id);
   if (!s) return res.status(404).json({ error: 'unknown trial' });
   res.json({ state: publicState(s.state, s.caseFile), record: s.state.record });
 });
 
 router.post('/trial/:id/action', async (req, res) => {
-  const s = sessions.get(req.params.id);
+  const s = getSession(req.params.id);
   if (!s) return res.status(404).json({ error: 'unknown trial' });
   if (s.busy) return res.status(429).json({ error: 'the court is still handling your last action' });
   s.busy = true;
   try {
     const result = await handleAction(s.state, s.caseFile, req.body || {});
+    saveTrial(s);
     res.json(result);
   } catch (err) {
     console.error('[api]', err);
@@ -172,7 +189,7 @@ router.post('/trial/:id/action', async (req, res) => {
 });
 
 router.get('/trial/:id/transcript.txt', async (req, res) => {
-  const s = sessions.get(req.params.id);
+  const s = getSession(req.params.id);
   if (!s) return res.status(404).json({ error: 'unknown trial' });
   try {
     const { text } = await buildTranscript(s.state, s.caseFile);
@@ -186,7 +203,7 @@ router.get('/trial/:id/transcript.txt', async (req, res) => {
 });
 
 router.get('/trial/:id/transcript.html', async (req, res) => {
-  const s = sessions.get(req.params.id);
+  const s = getSession(req.params.id);
   if (!s) return res.status(404).json({ error: 'unknown trial' });
   try {
     const { html } = await buildTranscript(s.state, s.caseFile);
