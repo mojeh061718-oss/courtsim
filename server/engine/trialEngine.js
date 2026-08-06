@@ -161,6 +161,8 @@ async function judgeMotionRuling(state, caseFile, { movant, text, response }) {
     {
       json: true,
       temperature: 0.4,
+      effort: 'low',
+      provider: 'xai',
       mock: () => {
         const grant = hash01(text) > 0.5;
         return grant
@@ -305,6 +307,7 @@ async function witnessAnswers(state, caseFile, events, question) {
     ],
     {
       temperature: 0.7,
+      effort: 'none',
       mock: () => {
         const s = sentences(w.knowledge);
         const i = Math.floor(hash01(question + w.id) * s.length);
@@ -489,6 +492,7 @@ async function aiNextQuestion(state, caseFile, w) {
     {
       json: true,
       temperature: 0.7,
+      effort: 'none',
       mock: () => {
         const n = state.exam.qCount;
         if (n >= 3) return { pass: true };
@@ -511,6 +515,8 @@ async function aiStatement(state, caseFile, kindLabel) {
     ],
     {
       temperature: 0.75,
+      effort: 'low',
+      provider: 'xai',
       mock: () => {
         const theory = caseFile.theories[state.aiSide];
         const ev = caseFile.evidence.filter((e) => e.offeredBy === state.aiSide || e.offeredBy === 'both').slice(0, 3).map((e) => e.label.replace(/Exhibit \d+: /, ''));
@@ -579,6 +585,8 @@ async function judgeObjectionRuling(state, caseFile, { objector, basis, argument
     {
       json: true,
       temperature: 0.3,
+      effort: 'low',
+      provider: 'xai',
       mock: () => fallbackRuling(targetText + basis.label),
     }
   );
@@ -623,6 +631,7 @@ async function counselReview(state, caseFile, text, contextLabel) {
     {
       json: true,
       temperature: 0.4,
+      effort: 'none',
       mock: () => {
         const t = text.toLowerCase();
         if (/(didn't you|isn't it true|wouldn't you agree)/.test(t) && state.exam?.stage === 'direct' && examinerIsUser(state))
@@ -650,6 +659,7 @@ async function judgeScreen(state, caseFile, text) {
     {
       json: true,
       temperature: 0.2,
+      effort: 'none',
       mock: () => {
         // Offline heuristic: flag only when the submission shares 2+ distinctive
         // content words with an exclusion (common legal vocabulary ignored).
@@ -673,7 +683,7 @@ async function counselFreeText(state, caseFile, side, task, mock) {
       { role: 'system', content: counselSystem({ caseFile, side, phaseLabel: state.phase, difficulty: diff(state).counsel }) },
       { role: 'user', content: `RECORD (recent):\n${transcriptText(state)}\n\n${task}` },
     ],
-    { temperature: 0.6, mock }
+    { temperature: 0.6, effort: 'none', mock }
   );
 }
 
@@ -715,6 +725,7 @@ async function deliverVerdict(state, caseFile, events) {
     ],
     {
       temperature: 0.6,
+      provider: 'xai',
       mock: () => {
         const s = state.score;
         const grade = s.admonishments > 2 ? 'C-' : s.userObjections.sustained >= s.userObjections.overruled ? 'B+' : 'B-';

@@ -44,6 +44,8 @@ export async function runDeliberationRound(state, caseFile, jurorFacingRecord) {
       {
         json: true,
         temperature: 0.85,
+        effort: 'low',
+        provider: 'xai',
         mock: () => mockJurorTurn(juror, caseFile, delib, jurorFacingRecord),
       }
     );
@@ -119,6 +121,7 @@ export async function deliberationAnalysis(state, caseFile) {
     ],
     {
       temperature: 0.5,
+      provider: 'xai',
       mock: () => {
         const v = delib.verdict ? Object.entries(delib.verdict).map(([k, x]) => `${k}: ${String(x).replace(/_/g, ' ')}`).join('; ') : 'none recorded';
         return `Deliberation review (offline mode). The panel of ${state.jury.length} deliberated ${delib.round} round(s). Early votes clustered around the physical evidence most cited aloud; jurors with technical backgrounds anchored the discussion and others converged as rounds progressed. Final outcome — ${v}. For the attorneys: the exhibits jurors quoted by name in the room were the ones that decided the case; testimony nobody repeated back had little effect.`;
