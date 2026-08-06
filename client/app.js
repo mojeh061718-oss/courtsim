@@ -129,7 +129,9 @@
       $('#side-difficulty').value = String(r.difficulty);
       $('#side-difficulty').dispatchEvent(new Event('input'));
       clearInterval(ticker);
-      status.textContent = '';
+      status.textContent = r.fallback
+        ? '⚠️ Live generation was unavailable — you received a stock training case. Try again in a minute for a fresh one.'
+        : '';
     } catch (err) {
       status.textContent = 'Generation failed: ' + err.message + ' — try again.';
     } finally {

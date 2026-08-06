@@ -40,11 +40,16 @@ export async function generateCase({ theme, difficulty }) {
       { role: 'system', content: GENERATOR_SYSTEM },
       { role: 'user', content: generatorPrompt(theme, level) },
     ],
-    // effort 'none': case authoring is creative output — reasoning roughly
-    // doubled generation latency on Bedrock without quality gain.
-    { json: true, temperature: 0.9, effort: 'none', mock: () => mockCase(theme, level) }
+    // Route to the native API (faster, no new-account throughput ramp) with a
+    // generous timeout — this is the app's single longest-output call. effort
+    // 'none' applies automatically if it lands on Bedrock instead.
+    { json: true, temperature: 0.9, effort: 'none', provider: 'xai', timeoutMs: 240000, attempts: 2, mock: () => ({ ...mockCase(theme, level), __mock: true }) }
   );
   const caseFile = normalize(raw, theme, level);
+  caseFile.fallback = Boolean(raw && raw.__mock);
+  if (caseFile.fallback) {
+    caseFile.status += ' — LIVE GENERATION UNAVAILABLE; this is a stock training case';
+  }
   if (registry.size >= MAX_GENERATED) {
     registry.delete(registry.keys().next().value);
   }

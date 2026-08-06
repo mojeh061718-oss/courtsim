@@ -91,7 +91,7 @@ router.post('/generate-case', async (req, res) => {
   const { theme, difficulty } = req.body || {};
   try {
     const caseFile = await generateCase({ theme: String(theme || '').slice(0, 200), difficulty });
-    res.json({ id: caseFile.id, title: caseFile.title, difficulty: caseFile.difficulty, status: caseFile.status });
+    res.json({ id: caseFile.id, title: caseFile.title, difficulty: caseFile.difficulty, status: caseFile.status, fallback: Boolean(caseFile.fallback) });
   } catch (err) {
     console.error('[generate]', err);
     res.status(500).json({ error: err.message });
