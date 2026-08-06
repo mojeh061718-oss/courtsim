@@ -1,0 +1,134 @@
+/**
+ * State of Florida v. Casey Marie Anthony (Orange County, 2011) — the death of
+ * two-year-old Caylee Marie Anthony. Facts from the extensive public record.
+ */
+export default {
+  id: 'casey-anthony',
+  title: 'State of Florida v. Casey Marie Anthony',
+  jurisdiction: 'Ninth Judicial Circuit, Orange County, Florida',
+  status: 'Concluded in real life (simulation is outcome-blind)',
+  blurb:
+    'Two-year-old Caylee Anthony is not reported missing for 31 days; her remains are found in woods near the family home. The State alleges chloroform and duct tape; the defense alleges an accidental drowning and a family cover-up.',
+  disclaimer:
+    'Educational dramatization based on the public trial record. Principal figures are historical; testimony summaries are condensed from public reporting.',
+  parties: {
+    defendant: 'Casey Marie Anthony, 22 at the time of the events of 2008',
+    victims: ['Caylee Marie Anthony, her two-year-old daughter'],
+    judge: 'Belvin Perry, Jr.',
+    prosecutor: 'Assistant State Attorney Linda Drane Burdick',
+    defenseCounsel: 'Jose Baez',
+  },
+  factSummary: `Caylee Marie Anthony, age two, was last seen alive around June 16, 2008, at the Orlando home she shared with her mother Casey Anthony and grandparents George and Cindy Anthony. For 31 days no one reported her missing. During that period Casey Anthony stayed with her boyfriend, went to nightclubs, and got a tattoo reading "Bella Vita." When Cindy Anthony finally located Casey and demanded answers, Casey claimed a nanny named Zenaida "Zanny" Fernandez-Gonzalez had kidnapped Caylee — a nanny who investigators determined did not exist. Casey also lied about working at Universal Studios, walking detectives through the building before admitting the job was fictitious. Casey's abandoned Pontiac Sunfire had been towed; family members and a tow-yard worker described a strong odor from the trunk, which Cindy initially reported in a 911 call as smelling "like there's been a dead body in the damn car." Forensic analysis found a hair consistent with Caylee's, showing apparent post-mortem root banding, in the trunk, and air analysis reported chemical markers argued to be consistent with human decomposition; chloroform was reported in trunk air samples at disputed levels. Computer forensics identified searches from the Anthony home computer for "chloroform" and related terms in March 2008; the number of visits became a disputed issue. In December 2008, meter reader Roy Kronk found Caylee's skeletal remains in wooded ground off Suburban Drive, less than a mile from the Anthony home, with duct tape associated with the skull area, a laundry bag, and a Winnie-the-Pooh blanket matching items from the Anthony home. The medical examiner ruled the death a homicide by undetermined means. The defense asserted at trial that Caylee accidentally drowned in the family pool on June 16, that George Anthony helped conceal the death, and that Casey's lies were the product of a dysfunctional family dynamic; George Anthony denied all of it.`,
+  theories: {
+    prosecution:
+      'A young mother who wanted her freedom used chloroform and three pieces of duct tape, put her daughter in the trunk, and dumped her in a swamp — then partied for 31 days and lied to everyone, inventing a nanny, a job, and a kidnapping. The lies, the smell, the science, and the burial scene items from her own home tell one coherent story of premeditated murder.',
+    defense:
+      'A little girl drowned in a backyard pool with a ladder she could climb, and a broken family covered it up as it covered up everything else. Casey\'s lies were the survival habit of a young woman shaped by dysfunction — lies after a death are not proof of murder. The State\'s "science" — trunk air chemistry, a hair band, disputed search counts — is novel, contested, and cannot say how Caylee died. No cause of death, no witness, no confession: that is reasonable doubt.',
+  },
+  charges: [
+    {
+      id: 'murder_one',
+      name: 'Count 1: First-degree murder of Caylee Anthony',
+      elements: [
+        'Caylee Anthony is dead',
+        'The death was caused by the criminal act of the defendant',
+        'The killing was premeditated (a conscious decision to kill formed before the act)',
+      ],
+      verdictOptions: ['guilty_of_first_degree_murder', 'guilty_of_second_degree_murder', 'guilty_of_manslaughter', 'not_guilty'],
+      lesserNote: 'Second-degree murder (depraved mind) and manslaughter are lesser included offenses.',
+    },
+    {
+      id: 'agg_child_abuse',
+      name: 'Count 2: Aggravated child abuse',
+      elements: [
+        'The defendant knowingly or willfully committed child abuse upon Caylee',
+        'The abuse caused great bodily harm',
+      ],
+      verdictOptions: ['guilty', 'not_guilty'],
+    },
+    {
+      id: 'agg_manslaughter',
+      name: 'Count 3: Aggravated manslaughter of a child',
+      elements: [
+        'Caylee\'s death was caused by the defendant\'s culpable negligence',
+        'The defendant was a caregiver who failed to provide care, causing death',
+      ],
+      verdictOptions: ['guilty', 'not_guilty'],
+    },
+  ],
+  juryInstructions: `The defendant is presumed innocent; the State bears the burden of proof beyond a reasonable doubt on every element. First-degree murder requires premeditation — a fully formed conscious purpose to kill, existing before the act, for any length of time. Second-degree murder requires an act imminently dangerous to another showing a depraved mind without regard for human life. Manslaughter requires culpable negligence causing death. Lies or flight after the fact may be considered as consciousness of guilt but cannot alone prove the crime. Where the evidence is circumstantial, it must exclude every reasonable hypothesis of innocence as to each element. Consider each count independently.`,
+  witnesses: [
+    { id: 'cindy', name: 'Cindy Anthony', side: 'prosecution', description: 'the defendant\'s mother and Caylee\'s grandmother', demeanor: 'volatile grief; oscillates between protecting Casey and telling the truth; combative when cornered', knowledge: 'Last saw Caylee mid-June 2008. Spent 31 days being told shifting stories — Caylee with the nanny, Casey working in Tampa. Tracked Casey down in July; called 911 three times, in the last call saying the car smelled like a dead body had been in it. Identified the Winnie-the-Pooh blanket, laundry bag, and shorts from the remains site as consistent with items from her home. Later claimed she herself may have made some of the chloroform-related computer searches while home from work, though employment records contradicted her work-hours account. Maintains the pool ladder was sometimes left accessible and Caylee could climb.' },
+    { id: 'george', name: 'George Anthony', side: 'prosecution', description: 'the defendant\'s father, retired police detective', demeanor: 'wounded dignity; barely contained fury at the accusations against him; grief breaks through', knowledge: 'Saw Casey and Caylee leave the house June 16, 2008 in the afternoon — the last time he saw Caylee alive; both seemed normal. Denies absolutely any drowning, any cover-up, any duct tape, and the abuse allegations the defense has made against him. Smelled the towed car at the impound lot and, as a former detective, recognized what he believed was the odor of human decomposition. Later attempted suicide amid the ordeal, leaving a note; the defense characterizes this as guilt, he describes it as despair. Admits gas cans of his had duct tape of the same brand found at the scene.' },
+    { id: 'lee', name: 'Lee Anthony', side: 'prosecution', description: 'the defendant\'s brother', demeanor: 'flat, guarded, visibly caught between family members', knowledge: 'Questioned Casey in July 2008 about Caylee\'s whereabouts; she told him the nanny story and admitted she hadn\'t actually seen Caylee in 31 days. Describes the family as prone to secrets and appearances. Cooperated with both sides at different times.' },
+    { id: 'melich', name: 'Detective Yuri Melich', side: 'prosecution', description: 'Orange County Sheriff\'s Office lead detective', demeanor: 'calm, prepared, quietly relentless', knowledge: 'Led the investigation from July 15, 2008. Documented Casey\'s recorded statements: the Zanny kidnapping story, the fake Universal Studios job — including the walk through Universal until she admitted in a hallway that she did not work there. Verified no Zenaida Fernandez-Gonzalez matching her description existed. Traced the Sunfire\'s abandonment and tow. Coordinated the December 2008 remains-site processing: duct tape associated with the skull, blanket, laundry bag, matching home items. Documented Casey\'s jailhouse calls focused on her boyfriend and bond, rarely on Caylee.' },
+    { id: 'kronk', name: 'Roy Kronk', side: 'prosecution', description: 'county meter reader who found the remains', demeanor: 'folksy, defensive about his August calls and the reward', knowledge: 'Called in a suspicious bag in the same woods in August 2008 three days running; deputies dismissed it. In December 2008 he returned, probed the bag, and a child\'s skull rolled out. Admits he mentioned reward money to his son and gave differing accounts of how he moved the bag. Denies ever possessing or staging the remains.' },
+    { id: 'vass', name: 'Dr. Arpad Vass', side: 'prosecution', description: 'Oak Ridge National Laboratory forensic anthropologist, decomposition chemistry', demeanor: 'enthusiastic scientist; on cross, defends a novel method', knowledge: 'Analyzed air and carpet samples from the Sunfire trunk. Reported chemical compounds consistent with human decomposition and chloroform at levels he found "shockingly high." His odor-signature database and method were pioneering and not universally accepted; he concedes no peer-reviewed standard existed for "smell of death" quantification, and that chloroform has some household sources.' },
+    { id: 'drg', name: 'Dr. Jan Garavaglia', side: 'prosecution', description: 'District 9 Chief Medical Examiner', demeanor: 'brisk, certain, seasoned', knowledge: 'Ruled Caylee\'s death homicide by undetermined means. Bases: no one reported the child missing for 31 days, the body was hidden, and duct tape was associated with the remains — none consistent in her experience with accidental death, which caretakers report immediately. Cannot determine mechanism from skeletal remains; concedes she cannot scientifically exclude drowning as the mechanism, while standing by homicide as the manner.' },
+    { id: 'bradley', name: 'John Bradley (composite of computer-forensics testimony)', side: 'prosecution', description: 'software developer whose tool analyzed the home computer\'s browser history', demeanor: 'technical; candid about a serious error', knowledge: 'His software initially reported the "chloroform" page visited 84 times in March 2008. He later determined the count was a software error — the accurate figure was one visit to that page, with a separate search for "how to make chloroform" and related queries such as "neck breaking" in the history. The searches occurred when phone records suggest Cindy Anthony was at work.' },
+    { id: 'forgey', name: 'Deputy Jason Forgey', side: 'prosecution', description: 'K-9 handler with cadaver dog Gerus', demeanor: 'confident handler, protective of his dog\'s record', knowledge: 'Gerus, a certified human-remains-detection dog, alerted on the trunk of the Sunfire and in the Anthony backyard near the play area. Documents the dog\'s certification and track record; concedes alerts cannot be cross-examined and no remains were found in the yard.' },
+    { id: 'lazzaro', name: 'Tony Lazzaro', side: 'prosecution', description: 'the defendant\'s boyfriend in June-July 2008', demeanor: 'reluctant, straightforward, a little embarrassed', knowledge: 'Casey essentially lived with him from mid-June 2008. She was normal, affectionate, partying at Fusian nightclub, entering a "hot body" contest; she never mentioned Caylee missing — said Caylee was with the nanny or at the beach. Helped her family locate her in July. Never saw the child in that period.' },
+    { id: 'spitz', name: 'Dr. Werner Spitz', side: 'defense', description: 'veteran forensic pathologist for the defense', demeanor: 'grand-old-man certainty; dismissive of opposing work', knowledge: 'Conducted a second autopsy. Criticizes the official examination as "shoddy" for not opening the skull. Opines the duct tape adhered to the skull area only after decomposition — possibly placed later or shifted by environment — and found no evidence tape was applied to a living or freshly deceased child. Cannot determine cause of death; testifies nothing excludes drowning. On cross, concedes his skull-opening critique is a methods dispute and he has been criticized for testimony in other famous cases.' },
+    { id: 'holloway', name: 'Krystal Holloway', side: 'defense', description: 'volunteer searcher who says she had an affair with George Anthony', demeanor: 'nervous, impeachable, but plainspoken', knowledge: 'Claims George Anthony, during the search period, told her privately that Caylee\'s death "was an accident that snowballed out of control." George denies the affair and the statement, calling her a volunteer he barely knew. She has a prior record involving dishonesty and sold her story to a tabloid — both fair game on cross.' },
+  ],
+  evidence: [
+    { id: 'thirty_one_days', label: 'Exhibit 1: The 31-day timeline', desc: 'Chronology June 16 – July 15, 2008: no report, nightclub photos, tattoo appointment', offeredBy: 'prosecution' },
+    { id: 'call_911_cindy', label: 'Exhibit 2: Cindy Anthony 911 calls (July 15, 2008)', desc: 'Three escalating calls, ending with "smells like there\'s been a dead body in the damn car"', offeredBy: 'prosecution' },
+    { id: 'trunk_hair', label: 'Exhibit 3: Hair from Sunfire trunk', desc: 'Hair microscopically consistent with Caylee, apparent post-mortem root banding', offeredBy: 'prosecution' },
+    { id: 'air_analysis', label: 'Exhibit 4: Trunk air chemistry (Oak Ridge)', desc: 'Compounds argued consistent with decomposition; chloroform detected — levels disputed', offeredBy: 'prosecution' },
+    { id: 'chloroform_searches', label: 'Exhibit 5: Home computer forensic report', desc: '"How to make chloroform," "chloroform," "neck breaking" searches, March 2008; visit-count error corrected 84→1', offeredBy: 'prosecution' },
+    { id: 'duct_tape', label: 'Exhibit 6: Duct tape from remains site', desc: 'Henkel-brand tape associated with skull area; same rare brand as tape on Anthony gas cans', offeredBy: 'prosecution' },
+    { id: 'remains_scene', label: 'Exhibit 7: Remains-site photographs and map', desc: 'Wooded area off Suburban Drive, under a mile from the home', offeredBy: 'prosecution' },
+    { id: 'blanket', label: 'Exhibit 8: Winnie-the-Pooh blanket', desc: 'Matches bedding set from Caylee\'s room at the Anthony home', offeredBy: 'prosecution' },
+    { id: 'laundry_bag', label: 'Exhibit 9: Canvas laundry bag', desc: 'Matches bag set from the Anthony home', offeredBy: 'prosecution' },
+    { id: 'me_report', label: 'Exhibit 10: Medical examiner report', desc: 'Homicide by undetermined means; skeletal remains', offeredBy: 'prosecution' },
+    { id: 'zanny_lies', label: 'Exhibit 11: Recorded statements — the "Zanny" story', desc: 'Kidnapping account naming a nanny who did not exist', offeredBy: 'prosecution' },
+    { id: 'universal', label: 'Exhibit 12: Universal Studios walk-through', desc: 'Detectives\' account of Casey leading them to a nonexistent office before admitting the lie', offeredBy: 'prosecution' },
+    { id: 'tattoo', label: 'Exhibit 13: "Bella Vita" tattoo records', desc: 'Tattoo obtained July 2, 2008; artist appointment records', offeredBy: 'prosecution' },
+    { id: 'party_photos', label: 'Exhibit 14: Nightclub photographs', desc: 'Casey socializing during the 31 days', offeredBy: 'prosecution' },
+    { id: 'dog_alerts', label: 'Exhibit 15: K-9 alert reports', desc: 'Cadaver-dog alerts on trunk and backyard', offeredBy: 'prosecution' },
+    { id: 'tow_records', label: 'Exhibit 16: Tow yard records and testimony', desc: 'Sunfire abandoned near Amscot, towed June 30; attendants describe trunk odor', offeredBy: 'prosecution' },
+    { id: 'jail_calls', label: 'Exhibit 17: Jailhouse call recordings', desc: 'Calls focused on boyfriend and bond; hostility to family questions', offeredBy: 'prosecution' },
+    { id: 'pool_ladder', label: 'Exhibit 18: Pool and ladder photographs', desc: 'Above-ground pool; photos of Caylee able to climb the ladder', offeredBy: 'defense' },
+    { id: 'suicide_note', label: 'Exhibit 19: George Anthony suicide note (Jan 2009)', desc: 'Note from his attempt; defense argues consciousness of guilt, George describes despair', offeredBy: 'defense' },
+    { id: 'kronk_calls', label: 'Exhibit 20: Roy Kronk August 2008 call records', desc: 'Three August calls about the same area, months before the December discovery', offeredBy: 'defense' },
+  ],
+  aiPretrialMotions: {
+    prosecution: [
+      { id: 'p1', title: 'Motion in limine to exclude unproffered abuse allegations against George Anthony', argument: 'The defense should be barred from accusing George Anthony of sexual abuse or of staging the death scene unless it proffers actual admissible evidence. Opening statements are not a license to assassinate a witness\'s character with facts counsel never intends to prove.' },
+      { id: 'p2', title: 'Motion to admit the corrected computer-search evidence', argument: 'The chloroform and "neck breaking" searches are admissible with the corrected single-visit count; the earlier software error goes to weight, not admissibility, and the State will front the correction.' },
+    ],
+    defense: [
+      { id: 'd1', title: 'Motion to exclude trunk-odor and air-chemistry evidence (Frye)', argument: 'Dr. Vass\'s "odor signature" air analysis is novel science with no peer-reviewed standards, no error rate, and no general acceptance. Florida is a Frye state; this is precisely the unvetted technique Frye exists to keep from a jury.' },
+      { id: 'd2', title: 'Motion to exclude cadaver-dog alerts', argument: 'A dog\'s alert is an out-of-court assertion that cannot be cross-examined, resting on handler interpretation with documented false-alert rates. Its prejudice vastly outweighs its probative value.' },
+      { id: 'd3', title: 'Motion to exclude "party photos" and tattoo evidence', argument: 'Photographs of the defendant dancing and a tattoo reading "Beautiful Life" are raw character assassination — grief presents in many ways, and Rule 403 does not permit the State to convict a mother for partying.' },
+    ],
+  },
+  aliases: [
+    ['Casey Marie Anthony', 'the defendant, Ms. A.'],
+    ['Casey Anthony', 'the defendant, Ms. A.'],
+    ['Casey', 'Ms. A.'],
+    ['Caylee Marie Anthony', 'the child, C.'],
+    ['Caylee', 'the child C.'],
+    ['Cindy Anthony', 'the grandmother'],
+    ['George Anthony', 'the grandfather'],
+    ['Lee Anthony', 'the defendant\'s brother'],
+    ['Anthony', 'A.'],
+    ['Orlando', 'the city'],
+  ],
+  jurorPool: [
+    { seat: 1, name: 'Wallace Greer', age: 63, occupation: 'retired postal supervisor', background: 'Grandfather of four; believes families should protect children above all.', disposition: 'steady, moralistic, slow to anger' },
+    { seat: 2, name: 'Dr. Imani Sesay', age: 41, occupation: 'community-college chemistry instructor', background: 'Teaches lab methods; fierce about scientific rigor and error rates.', disposition: 'demands validated methodology before crediting science' },
+    { seat: 3, name: 'Curtis Vane', age: 36, occupation: 'HVAC technician', background: 'Single dad of a toddler; can\'t fathom 31 days of silence.', disposition: 'visceral about parental duty, tries to stay fair' },
+    { seat: 4, name: 'Lucille Marsh', age: 58, occupation: 'church office administrator', background: 'Has seen troubled families keep devastating secrets.', disposition: 'believes lies have many mothers besides guilt' },
+    { seat: 5, name: 'Devon Achebe', age: 29, occupation: 'software QA analyst', background: 'Finds bugs for a living; the 84-versus-1 search-count error fascinates him.', disposition: 'distrusts any data point that changed once already' },
+    { seat: 6, name: 'Karen Ostrowski', age: 50, occupation: 'swimming instructor', background: 'Teaches water safety; knows how fast toddlers drown silently.', disposition: 'takes the drowning hypothesis seriously, tests it hard' },
+    { seat: 7, name: 'Benny Kwan', age: 44, occupation: 'restaurant owner', background: 'Works 80-hour weeks; pragmatic about what ordinary people do under stress.', disposition: 'common-sense arbiter, impatient with speculation' },
+    { seat: 8, name: 'Tabitha Lowe', age: 26, occupation: 'veterinary technician', background: 'Handles working dogs; knows both the skill and the limits of animal alerts.', disposition: 'nuanced on the K-9 evidence, otherwise open' },
+    { seat: 9, name: 'Frank Iaconelli', age: 55, occupation: 'general contractor', background: 'Built pool decks for twenty years; knows ladders, gates, and codes.', disposition: 'practical, detail-driven, hates loose ends' },
+    { seat: 10, name: 'Michelle Aubert', age: 38, occupation: 'labor and delivery nurse', background: 'Watches new mothers struggle; wary of judging young parents too fast.', disposition: 'compassionate but insists on accountability' },
+    { seat: 11, name: 'Omar Haddad', age: 47, occupation: 'high-school civics teacher', background: 'Teaches the Bill of Rights; takes the burden of proof personally.', disposition: 'guardian of reasonable doubt, wants each element proved' },
+    { seat: 12, name: 'Doris Whitcomb', age: 68, occupation: 'retired librarian', background: 'A lifetime cataloguing sources; allergic to stories that keep changing.', disposition: 'quiet, note-taking, devastating in summary' },
+  ],
+  researchHint: 'Florida v. Casey Anthony, Orange County 2011 — verify timeline, forensic disputes, witness list. Exclude verdict from juror-facing material.',
+};

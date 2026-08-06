@@ -1,0 +1,133 @@
+/**
+ * The People of the State of California v. Orenthal James Simpson (1994-95) —
+ * the murders of Nicole Brown Simpson and Ronald Goldman. Facts from the
+ * public trial record.
+ */
+export default {
+  id: 'oj-simpson',
+  title: 'People of the State of California v. Orenthal James Simpson',
+  jurisdiction: 'Los Angeles County Superior Court, California',
+  status: 'Concluded in real life (simulation is outcome-blind)',
+  blurb:
+    'Nicole Brown Simpson and Ronald Goldman are found stabbed to death outside her Brentwood condominium. A trail of blood, hair, fiber, and a single leather glove leads to one of the most famous men in America — and to a defense that puts the LAPD itself on trial.',
+  disclaimer:
+    'Educational dramatization based on the public trial record. Principal figures are historical.',
+  parties: {
+    defendant: 'Orenthal James "O.J." Simpson, 46, retired professional football star and actor',
+    victims: ['Nicole Brown Simpson, 35, his former wife', 'Ronald Goldman, 25'],
+    judge: 'Lance A. Ito',
+    prosecutor: 'Deputy District Attorney Marcia Clark',
+    defenseCounsel: 'Johnnie L. Cochran, Jr.',
+  },
+  factSummary: `Shortly after midnight on June 13, 1994, Nicole Brown Simpson and her friend Ronald Goldman were found stabbed to death outside her condominium at 875 South Bundy Drive in Brentwood, Los Angeles. Nicole's throat was cut; Goldman bore dozens of wounds. A bloody left-hand leather glove lay near the bodies; blood drops ran along the walkway to the rear alley. O.J. Simpson, Nicole's former husband, had attended his daughter's dance recital that evening, and flew to Chicago on a 11:45 p.m. flight from LAX. Limousine driver Allan Park arrived at Simpson's Rockingham estate around 10:25 p.m., buzzed the intercom repeatedly with no answer, and shortly before 11 p.m. saw a tall Black figure in dark clothing cross the driveway into the house, after which lights came on and Simpson answered, saying he had overslept. House guest Brian "Kato" Kaelin heard three loud thumps on his rear wall around 10:40 p.m. Behind that wall, Detective Mark Fuhrman found a right-hand leather glove — apparently the mate of the Bundy glove — bearing blood consistent with both victims and Simpson. Blood drops at Bundy to the left of shoe prints matched Simpson's type and later his DNA; the shoeprints were size-12 Bruno Magli soles. Simpson had a fresh cut on his left middle finger on June 13. Blood was found in and on his white Ford Bronco, on socks in his bedroom (with DNA consistent with Nicole's), and along his driveway. The prosecution documented a history of domestic violence, including Nicole's 1989 and 1993 911 calls. The defense answered that the LAPD's evidence handling was sloppy and its lead detective racist: criminalist Dennis Fung's collection lapses, a reference vial of Simpson's blood carried unsealed for hours with a portion later unaccounted for, claims of EDTA preservative in key stains, and Detective Fuhrman's recorded racial slurs — culminating in a courtroom demonstration in which the leather gloves appeared not to fit Simpson's hands.`,
+  theories: {
+    prosecution:
+      'A jealous, controlling ex-husband who beat Nicole for years finally killed her, and killed Ron Goldman because he was there. The physical evidence is overwhelming and mutually corroborating: his blood at the scene, the victims\' blood in his car and home, his hair in the cap, the gloves, the shoeprints, the cut, the missing hour and the figure crossing the driveway. No conspiracy could plant it all.',
+    defense:
+      'Garbage in, garbage out. The LAPD contaminated, mishandled, and in places planted this evidence: an unsealed blood vial with missing blood, a rookie-supervised collection, a detective with a documented racial animus who hopped a wall and "found" the key exhibit, and gloves that do not fit the man accused. If the evidence chain is rotten, the DNA numbers mean nothing. Reasonable doubt is everywhere.',
+  },
+  charges: [
+    {
+      id: 'murder_nicole',
+      name: 'Count 1: Murder in the first degree — Nicole Brown Simpson',
+      elements: [
+        'The defendant unlawfully killed Nicole Brown Simpson',
+        'With malice aforethought',
+        'Willfully, deliberately, and with premeditation',
+      ],
+      verdictOptions: ['guilty_of_first_degree_murder', 'guilty_of_second_degree_murder', 'not_guilty'],
+      lesserNote: 'Second-degree murder is a lesser included offense.',
+    },
+    {
+      id: 'murder_goldman',
+      name: 'Count 2: Murder in the first degree — Ronald Goldman',
+      elements: [
+        'The defendant unlawfully killed Ronald Goldman',
+        'With malice aforethought',
+        'Willfully, deliberately, and with premeditation',
+      ],
+      verdictOptions: ['guilty_of_first_degree_murder', 'guilty_of_second_degree_murder', 'not_guilty'],
+    },
+  ],
+  juryInstructions: `The defendant is presumed innocent; the People must prove guilt beyond a reasonable doubt. First-degree murder requires an unlawful killing with malice aforethought that was willful, deliberate, and premeditated; premeditation requires reflection but no particular length of time. Second-degree murder is an unlawful killing with malice but without premeditation. Evidence of prior domestic abuse was admitted for the limited purposes of motive, intent, and the relationship between the parties — not as proof of propensity. You must evaluate the reliability of scientific evidence in light of how it was collected, preserved, and tested. If you find evidence was fabricated or planted, you may distrust the remainder of that party's evidence. Consider each count separately.`,
+  witnesses: [
+    { id: 'park', name: 'Allan Park', side: 'prosecution', description: 'limousine driver hired to take Simpson to LAX', demeanor: 'earnest, precise, unshaken — a witness with no stake', knowledge: 'Arrived at Rockingham about 10:25 p.m. on June 12. Buzzed the intercom repeatedly from about 10:40 with no answer; did not see the Bronco when he scanned the street. Just before 11 p.m., saw a tall figure, approximately six feet, 200 pounds, in dark clothing, cross the driveway from outside toward the front door; moments later lights came on and Simpson answered, saying he had overslept and just gotten out of the shower. Loaded bags; Simpson insisted on handling one small dark bag himself. Timeline is anchored by his pager and phone calls to his boss.' },
+    { id: 'kato', name: 'Brian "Kato" Kaelin', side: 'prosecution', description: 'aspiring actor living in Simpson\'s guest house', demeanor: 'amiable, evasive under pressure, reluctant celebrity', knowledge: 'Had dinner with Simpson at McDonald\'s, returning about 9:40 p.m.; last saw him outside near the Bentley. Around 10:40 heard three loud thumps on his rear guest-house wall, strong enough to shake a picture. Went outside to investigate with a dim flashlight but did not walk the dark south pathway. Saw Simpson\'s bags by the door later; cannot account for Simpson\'s whereabouts between about 9:40 and 11 p.m. Resists characterizations from both sides; visibly does not want to hurt Simpson.' },
+    { id: 'fuhrman', name: 'Detective Mark Fuhrman', side: 'prosecution', description: 'LAPD detective who found the Rockingham glove', demeanor: 'polished and controlled on direct; the defense\'s central target on cross', knowledge: 'Among the first detectives at Bundy; observed the bodies, the left-hand glove, blood drops. Went with other detectives to Rockingham to notify Simpson; climbed the wall to admit the others after seeing what he described as exigent circumstances. Walked Kaelin\'s south pathway alone and found the right-hand leather glove, moist and sticky, behind the guest house near where the thumps were heard. Testified he had not used a certain racial slur in ten years — testimony contradicted by tape recordings in which he used it repeatedly and boasted of misconduct; on recall he invoked the Fifth Amendment. For simulation purposes: on the tapes subject, he stonewalls, and the court\'s pretrial rulings govern how far cross may go.' },
+    { id: 'vannatter', name: 'Detective Philip Vannatter', side: 'prosecution', description: 'LAPD lead detective', demeanor: 'veteran cop, dismissive of conspiracy claims, occasionally defensive', knowledge: 'Co-led the investigation. Directed the Rockingham entry, obtained the warrant, interviewed Simpson on June 13 — noting the fresh cut on his left middle finger and his vague, shifting account of how he got it. Carried Simpson\'s reference blood vial from downtown to Rockingham hours later rather than booking it immediately — the defense\'s "blood in his pocket" theme. Denies any planting; explains the vial handling as procedure to deliver it to the criminalist at the scene.' },
+    { id: 'fung', name: 'Dennis Fung', side: 'prosecution', description: 'LAPD criminalist who collected the physical evidence', demeanor: 'mild, nervous, ground down by days of cross-examination', knowledge: 'Collected blood and trace evidence at both scenes with trainee Andrea Mazzola handling much of the actual swatching. Concedes on cross: swatches left hours in an unairconditioned truck, some samples collected on the second day, a blanket from inside the condo placed over Nicole\'s body, missed blood on the back gate collected weeks later, and paperwork gaps about the reference vial\'s handling. Maintains none of it altered DNA results; contamination degrades DNA, it does not transform one person\'s profile into another\'s.' },
+    { id: 'dna_expert', name: 'Dr. Robin Cotton', side: 'prosecution', description: 'laboratory director, Cellmark Diagnostics (DNA)', demeanor: 'patient educator; the numbers witness', knowledge: 'Explains RFLP and PCR testing. Bundy walkway drops match Simpson with frequencies on the order of one in tens of millions to billions; blood on the socks in his bedroom matches Nicole with similar rarity; Bronco stains show mixtures consistent with Simpson and the victims; the Rockingham glove bears blood consistent with both victims and Simpson. Concedes DNA statistics assume proper collection and cannot detect planting; degraded or contaminated samples typically fail rather than falsely match.' },
+    { id: 'coroner', name: 'Dr. Lakshmanan Sathyavagiswaran', side: 'prosecution', description: 'Los Angeles County Chief Medical Examiner', demeanor: 'meticulous, unflappable through brutal cross about his office\'s errors', knowledge: 'Presented the autopsy findings (the original examiner\'s work having documented errors he candidly concedes — some thirty procedural mistakes). Nicole died of a deep neck wound; Goldman of multiple stab wounds; injuries consistent with a single edged weapon and a single assailant in his opinion, likely a right-handed attacker from behind for Nicole. Time of death cannot be fixed precisely — a window that includes 10:15-10:40 p.m. Concedes the coroner was not called to the scene for hours.' },
+    { id: 'shipp', name: 'Ron Shipp', side: 'prosecution', description: 'former LAPD officer and longtime Simpson friend', demeanor: 'sorrowful, conflicted, testifying against a friend', knowledge: 'Knew both O.J. and Nicole for years; saw photographs of Nicole\'s bruised face after the 1989 New Year\'s incident and counseled the couple informally. Testifies that the night after the murders, Simpson told him he had "had dreams of killing" Nicole. Admits on cross to past alcohol problems and that the defense will call him a hanger-on embellishing for attention; holds firm.' },
+    { id: 'denise', name: 'Denise Brown', side: 'prosecution', description: 'Nicole\'s sister', demeanor: 'raw grief and anger; powerful, at moments argumentative', knowledge: 'Describes the relationship: public humiliations, Simpson grabbing Nicole and throwing her against a wall during one incident, possessive rage at a recital shortly before the murders in her telling. Recounts the 1989 and 1993 episodes as the family understood them. On cross concedes she drank during some incidents she describes and did not witness the 1993 call\'s events firsthand.' },
+    { id: 'scheck_expert', name: 'Dr. John Gerdes', side: 'defense', description: 'clinical DNA laboratory director, defense contamination expert', demeanor: 'severe, uncompromising critic', knowledge: 'Audited LAPD\'s DNA laboratory practices: chronic cross-contamination in validation studies, evidence and reference samples processed in proximity, PCR carryover risks. Opines LAPD\'s lab was "the worst" he had audited and that PCR results from that facility cannot be trusted; RFLP on the socks and gate raises different questions — those stains are where EDTA claims arise. Concedes he does not claim the specific profiles are demonstrably wrong, only unreliable in origin.' },
+    { id: 'lee', name: 'Dr. Henry Lee', side: 'defense', description: 'renowned forensic scientist for the defense', demeanor: 'courtly, aphoristic, devastating in understatement', knowledge: 'Examined the scenes and evidence. Testifies to indications of possible evidence movement and a second set of unexplained shoe imprints at Bundy in his view; famously summarizes the collection problems: "something wrong." Questions the blood-drop patterns on the socks (soaked through to the opposite inner wall as if applied flat, not worn). Concedes alternative innocent explanations exist for several observations.' },
+    { id: 'rubin', name: 'Richard Rubin', side: 'prosecution', description: 'former Aris Isotoner glove executive', demeanor: 'confident specialist', knowledge: 'The gloves are Aris Leather Lights, style consistent with a pair Nicole purchased at Bloomingdale\'s in 1990 — a rare model and size (extra large). Photographs show Simpson wearing apparently identical gloves at football broadcasts in 1990-1994. Explains leather shrinks when soaked in blood and dried, and latex gloves worn underneath alter fit — his account of the failed courtroom demonstration.' },
+    { id: 'simpson_def', name: 'O.J. Simpson', side: 'defense', description: 'the defendant (testifies only if the defense calls him — high risk)', demeanor: 'charismatic, controlled, indignant at the accusation; vulnerable on the details', knowledge: 'Denies the murders absolutely. Account of the evening: chipping golf balls in the yard, a McDonald\'s run with Kato, dozing, packing, and a rushed shower before the limousine — explaining the missed intercom. Attributes the finger cut to a broken glass in Chicago upon hearing of Nicole\'s death, and earlier nicks to golf and rummaging in the Bronco. Describes the marriage as loving but turbulent, minimizing the 1989 incident as a mutual "wrestling match" he regrets. Cannot explain the blood evidence except as contamination or worse; insists the gloves are not his and did not fit.' },
+  ],
+  evidence: [
+    { id: 'bundy_glove', label: 'Exhibit 1: Left-hand glove (Bundy scene)', desc: 'Aris Leather Light, extra large, found near the bodies', offeredBy: 'prosecution' },
+    { id: 'rockingham_glove', label: 'Exhibit 2: Right-hand glove (Rockingham)', desc: 'Mate to Bundy glove, found behind guest house; blood consistent with both victims and defendant', offeredBy: 'prosecution' },
+    { id: 'bundy_drops', label: 'Exhibit 3: Bundy walkway blood drops', desc: 'Five drops left of bloody shoeprints; DNA consistent with defendant', offeredBy: 'prosecution' },
+    { id: 'socks', label: 'Exhibit 4: Socks from master bedroom', desc: 'Dark dress socks with bloodstains; DNA consistent with Nicole Brown Simpson', offeredBy: 'prosecution' },
+    { id: 'bronco_stains', label: 'Exhibit 5: Ford Bronco blood evidence', desc: 'Stains on door, console, carpet; mixtures consistent with defendant and victims', offeredBy: 'prosecution' },
+    { id: 'shoeprints', label: 'Exhibit 6: Bloody shoeprints', desc: 'Size-12 Bruno Magli Lorenzo soles leading away from the bodies', offeredBy: 'prosecution' },
+    { id: 'hair_fiber', label: 'Exhibit 7: Hair and fiber analysis', desc: 'Hairs consistent with defendant in knit cap and on Goldman\'s shirt; rare Bronco carpet fiber on the cap', offeredBy: 'prosecution' },
+    { id: 'cut_finger', label: 'Exhibit 8: Photographs of defendant\'s left hand', desc: 'Fresh cut on left middle finger, June 13', offeredBy: 'prosecution' },
+    { id: 'call_911_1989', label: 'Exhibit 9: 1989 incident records', desc: 'New Year\'s beating: police response, Nicole\'s injuries, no-contest plea to spousal battery', offeredBy: 'prosecution' },
+    { id: 'call_911_1993', label: 'Exhibit 10: 1993 911 recording', desc: 'Nicole: "He\'s going to beat the shit out of me" as Simpson rages in background', offeredBy: 'prosecution' },
+    { id: 'timeline_chart', label: 'Exhibit 11: Timeline chart', desc: 'Recital, McDonald\'s run, thumps (~10:40), Park\'s intercom attempts, figure crossing driveway (~10:55), 11:45 flight', offeredBy: 'prosecution' },
+    { id: 'knit_cap', label: 'Exhibit 12: Navy knit cap', desc: 'Found at Bundy near Goldman; hair and fiber evidence within', offeredBy: 'prosecution' },
+    { id: 'back_gate', label: 'Exhibit 13: Bundy rear gate blood', desc: 'Blood collected July 3 with defendant\'s DNA at high concentration — defense highlights the delay', offeredBy: 'both' },
+    { id: 'reference_vial', label: 'Exhibit 14: Reference blood vial log', desc: 'Defendant\'s blood drawn June 13, carried unsealed to Rockingham; ~1.5 cc unaccounted for in defense accounting', offeredBy: 'defense' },
+    { id: 'edta', label: 'Exhibit 15: EDTA testing', desc: 'Defense claims preservative in sock and gate stains; FBI examiner disputes interpretation', offeredBy: 'defense' },
+    { id: 'fuhrman_tapes', label: 'Exhibit 16: Fuhrman tape excerpts (as limited by court)', desc: 'Recorded slurs contradicting his testimony; scope restricted by pretrial ruling', offeredBy: 'defense' },
+    { id: 'glove_demo', label: 'Exhibit 17: Courtroom glove demonstration', desc: 'Defendant appearing unable to pull the gloves over latex liners', offeredBy: 'defense' },
+    { id: 'lab_audit', label: 'Exhibit 18: LAPD laboratory audit materials', desc: 'Contamination findings in validation studies; collection protocol violations', offeredBy: 'defense' },
+    { id: 'photos_gloves', label: 'Exhibit 19: Broadcast photographs 1990-94', desc: 'Defendant wearing apparently identical Aris gloves at football games', offeredBy: 'prosecution' },
+    { id: 'bronco_chase', label: 'Exhibit 20: June 17 events (as limited by court)', desc: 'Low-speed pursuit, note, disguise kit, cash and passport in the Bronco — admissibility contested', offeredBy: 'prosecution' },
+  ],
+  aiPretrialMotions: {
+    prosecution: [
+      { id: 'p1', title: 'Motion in limine to exclude or strictly limit the Fuhrman tapes', argument: 'Hours of inflammatory recordings would put a detective\'s vocabulary on trial instead of a double murder. If any impeachment is permitted, it must be a sanitized minimum — the probative value of the rest is nil against its incendiary prejudice.' },
+      { id: 'p2', title: 'Motion to admit the June 17 flight evidence', argument: 'A defendant who takes cash, a passport, and a disguise and leads police on a pursuit while a friend reads what sounds like a farewell note is showing consciousness of guilt. Flight has always been admissible; the jury may weigh it.' },
+    ],
+    defense: [
+      { id: 'd1', title: 'Motion to suppress the Rockingham warrantless entry and its fruits', argument: 'Four detectives left a double-murder scene to hop a private wall without a warrant on a claimed "welfare check." Everything found before the warrant — including the glove — is the fruit of an unconstitutional search and must be suppressed.' },
+      { id: 'd2', title: 'Motion to exclude domestic-discord evidence', argument: 'A 1989 misdemeanor and years-old arguments are propensity evidence dressed as motive. Marital discord is tragically common; murder is not. Character evidence rules exist precisely for this.' },
+      { id: 'd3', title: 'Motion for full disclosure and admissibility of the Fuhrman tapes', argument: 'The witness who found the single most important exhibit swore he had not used a racial slur in a decade. The tapes prove that false and show boasted misconduct. The defense is constitutionally entitled to impeach him with it — credibility is the whole case.' },
+    ],
+  },
+  aliases: [
+    ['Orenthal James "O.J." Simpson', 'the defendant, Mr. S., a celebrated retired athlete'],
+    ['O.J. Simpson', 'the defendant, Mr. S.'],
+    ['O.J.', 'Mr. S.'],
+    ['Simpson', 'Mr. S.'],
+    ['Nicole Brown Simpson', 'the first victim, Ms. N., his former wife'],
+    ['Nicole', 'Ms. N.'],
+    ['Ronald Goldman', 'the second victim, Mr. G.'],
+    ['Ron Goldman', 'Mr. G.'],
+    ['Goldman', 'Mr. G.'],
+    ['Kato Kaelin', 'the house guest'],
+    ['Mark Fuhrman', 'Detective F.'],
+    ['Fuhrman', 'Detective F.'],
+    ['Brentwood', 'the neighborhood'],
+    ['Rockingham', 'the defendant\'s estate'],
+    ['Bundy', 'the victim\'s residence'],
+  ],
+  jurorPool: [
+    { seat: 1, name: 'Vernon Askew', age: 57, occupation: 'aerospace machinist', background: 'Thirty years of precision tolerances; reads lab reports like blueprints.', disposition: 'believes physical evidence over any witness — if the chain is clean' },
+    { seat: 2, name: 'LaTonya Pruitt', age: 42, occupation: 'city social worker', background: 'Has seen police reports that didn\'t match what her clients lived.', disposition: 'takes police credibility as a live question, not a given' },
+    { seat: 3, name: 'Gene Okamoto', age: 63, occupation: 'retired pharmacist', background: 'A career of chain-of-custody and contamination controls.', disposition: 'ruthless about handling errors, fair about their limits' },
+    { seat: 4, name: 'Sandra Beaufort', age: 35, occupation: 'ER intake nurse', background: 'Sees domestic-violence injuries weekly and the excuses that follow.', disposition: 'attentive to the abuse history without letting it convict alone' },
+    { seat: 5, name: 'Miles Turnbull', age: 29, occupation: 'sports-bar manager', background: 'Grew up idolizing the defendant\'s athletic career.', disposition: 'fights his own awe; wants to be shown, not told' },
+    { seat: 6, name: 'Adele Kirchner', age: 66, occupation: 'retired high-school biology teacher', background: 'Taught genetics for decades; the DNA statistics are legible to her.', disposition: 'science-literate, explains the numbers to others' },
+    { seat: 7, name: 'Reuben Salazar', age: 47, occupation: 'union electrician', background: 'Works around inspectors who cut corners; knows how paperwork gets backfilled.', disposition: 'nose for procedural rot, resistant to grand conspiracies' },
+    { seat: 8, name: 'Cheryl Dunlap', age: 51, occupation: 'court stenographer in civil matters', background: 'Heard a thousand witnesses; catches contradictions verbatim.', disposition: 'credibility hawk, quotes testimony back precisely' },
+    { seat: 9, name: 'Harvey Blume', age: 60, occupation: 'menswear tailor', background: 'Forty years fitting gloves and gauging leather shrinkage.', disposition: 'has private expertise about fit he must weigh carefully' },
+    { seat: 10, name: 'Nadine Fontaine', age: 33, occupation: 'airline scheduler', background: 'Builds timelines for a living; minutes matter to her.', disposition: 'obsessive about the 9:40-to-11:00 window' },
+    { seat: 11, name: 'Terrence Vaughn', age: 44, occupation: 'long-haul trucker and Army veteran', background: 'Straight-line thinker; suspicious of lawyers on both sides.', disposition: 'wants the simplest story that fits all the evidence' },
+    { seat: 12, name: 'Iris Calloway', age: 69, occupation: 'retired church choir director', background: 'A lifetime weighing character and confession; grandmother of nine.', disposition: 'patient, moral center of the room, hard to rush' },
+  ],
+  researchHint: 'People v. O.J. Simpson, Los Angeles 1995 — verify evidence details and witness accounts. Exclude verdict from juror-facing material.',
+};
