@@ -168,6 +168,13 @@ input[type="range"] { accent-color: var(--brass); width: 100%; }
 .binder-item .bi-head { color: var(--ink); font-size: 0.85rem; margin-bottom: 3px; font-weight: bold; }
 .binder-item .bi-body { color: var(--ink-dim); font-size: 0.82rem; line-height: 1.5; white-space: pre-wrap; }
 
+/* War room — private strategy sheet */
+.strategy-privacy {
+  background: var(--panel-2); border: 1px dashed var(--brass); border-radius: 8px;
+  color: var(--ink-dim); font-size: 0.74rem; line-height: 1.45; padding: 8px 10px; margin-bottom: 8px;
+}
+.strategy-status { color: var(--brass); font-size: 0.82rem; padding: 10px 4px; font-style: italic; }
+
 .center-col { display: flex; flex-direction: column; min-height: 0; gap: 8px; }
 .transcript {
   flex: 1; overflow-y: auto; background: var(--panel); border: 1px solid var(--line);
@@ -318,7 +325,10 @@ input[type="range"] { accent-color: var(--brass); width: 100%; }
   .hint { font-size: 0.75rem; min-height: 1.1em; }
 
   /* Bigger touch targets everywhere the fingers go */
-  .tab { padding: 10px 6px; font-size: 0.82rem; }
+  /* Five tabs: let the bar scroll sideways instead of squeezing labels */
+  .tabs { overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex: 0 0 auto; padding: 10px 12px; font-size: 0.82rem; }
   .docket-item { padding: 11px 8px; }
   .drawer-handle { padding: 14px 0 8px; }
   .drawer-handle span { width: 56px; height: 6px; }
