@@ -20,23 +20,64 @@
   <!-- ============ CASE SELECTION ============ -->
   <section id="screen-select" class="screen">
     <header class="select-header">
-      <h1>CourtSim</h1>
-      <p class="tagline">Argue a real case end-to-end against an AI opposing counsel — before a judge who will hold you to the rules, and a blind jury that decides on the record you build.</p>
+      <div class="seal-wrap" aria-hidden="true">
+        <svg class="seal" viewBox="0 0 140 140" role="img" aria-label="CourtSim seal">
+          <defs>
+            <linearGradient id="brassg" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#ecd28a" />
+              <stop offset="0.55" stop-color="#c9a24b" />
+              <stop offset="1" stop-color="#8a6b2c" />
+            </linearGradient>
+            <radialGradient id="sealGlow" cx="0.5" cy="0.42" r="0.6">
+              <stop offset="0" stop-color="#c9a24b" stop-opacity="0.14" />
+              <stop offset="1" stop-color="#c9a24b" stop-opacity="0" />
+            </radialGradient>
+          </defs>
+          <circle cx="70" cy="70" r="58" fill="url(#sealGlow)" />
+          <circle cx="70" cy="70" r="66" fill="none" stroke="url(#brassg)" stroke-width="1.6" />
+          <circle cx="70" cy="70" r="61" fill="none" stroke="url(#brassg)" stroke-width="0.7" opacity="0.7" />
+          <g stroke="url(#brassg)" stroke-linecap="round" fill="none">
+            <circle cx="70" cy="31" r="3" fill="url(#brassg)" stroke="none" />
+            <line x1="70" y1="35" x2="70" y2="99" stroke-width="3.4" />
+            <path d="M34 48 Q70 40 106 48" stroke-width="2.8" />
+            <line x1="34" y1="48" x2="24" y2="72" stroke-width="1.1" />
+            <line x1="34" y1="48" x2="44" y2="72" stroke-width="1.1" />
+            <line x1="106" y1="48" x2="96" y2="72" stroke-width="1.1" />
+            <line x1="106" y1="48" x2="116" y2="72" stroke-width="1.1" />
+            <path d="M22 72 A12 12 0 0 0 46 72" stroke-width="2.4" />
+            <path d="M94 72 A12 12 0 0 0 118 72" stroke-width="2.4" />
+            <line x1="62" y1="99" x2="78" y2="99" stroke-width="2.6" />
+            <line x1="56" y1="104" x2="84" y2="104" stroke-width="3" />
+          </g>
+        </svg>
+      </div>
+      <h1 class="wordmark">COURTSIM</h1>
+      <div class="subline"><span class="rule"></span><span class="subline-text">Attorney Trial Simulator</span><span class="rule"></span></div>
+      <p class="tagline">Real cases, argued end-to-end. A judge who holds you to the rules. A jury you must earn.</p>
     </header>
     <div id="generator" class="generator-panel">
-      <h3>⚖️ Generate a new murder trial</h3>
-      <div class="gen-row">
-        <input id="gen-theme" type="text" maxlength="200" placeholder="Optional theme — e.g. 'poisoning at a family vineyard', 'cold case reopened by DNA'…" />
+      <div class="gen-head">
+        <h3>Draft a new case</h3>
+        <p class="gen-sub">An original murder trial built to order — parties, witnesses, exhibits, motions, and a seated jury of twelve.</p>
       </div>
       <div class="gen-row">
-        <label class="gen-label">Difficulty <span id="gen-diff-val">5</span>/10 — <span id="gen-diff-label">Seasoned litigator</span></label>
-        <input id="gen-difficulty" type="range" min="1" max="10" step="1" value="5" />
+        <input id="gen-theme" type="text" maxlength="200" placeholder="Theme (optional) — 'poisoning at a family vineyard', 'cold case reopened by DNA'…" />
       </div>
-      <div class="gen-row">
-        <button id="btn-generate" class="btn primary">Generate case</button>
+      <div class="gen-row complexity-block">
+        <div class="complexity-head">
+          <label class="gen-label">Case complexity</label>
+          <span class="complexity-value"><span id="gen-diff-val">5</span>/10 · <span id="gen-diff-label">Genuinely contested</span></span>
+        </div>
+        <input id="gen-difficulty" type="range" min="1" max="10" step="1" value="5" class="complexity-slider" />
+        <div class="complexity-ends"><span>Open-and-shut</span><span>Nation-splitting</span></div>
+        <p class="complexity-desc" id="gen-diff-desc"></p>
+      </div>
+      <div class="gen-row gen-actions">
+        <button id="btn-generate" class="btn primary gen-btn">⚖️&nbsp; Build the case</button>
         <span id="gen-status" class="gen-status"></span>
       </div>
     </div>
+    <h2 class="docket-title"><span class="rule"></span>Or take a case from the docket<span class="rule"></span></h2>
     <div id="case-list" class="case-grid"></div>
     <div id="side-picker" class="side-picker hidden">
       <h2 id="side-case-title"></h2>

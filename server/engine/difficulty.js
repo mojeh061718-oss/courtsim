@@ -56,14 +56,32 @@ export function maxQuestionsFor(level, base) {
   return Math.max(3, Math.min(10, base + Math.floor((clampLevel(level) - 5) / 2)));
 }
 
-/** Guidance injected into the CASE GENERATOR: how contested the facts are. */
+/** Label for how contested the FACTS of a generated case are (1-10). */
+export function complexityLabel(level) {
+  const l = clampLevel(level);
+  if (l <= 2) return 'Open-and-shut';
+  if (l <= 4) return 'Strong but not airtight';
+  if (l <= 6) return 'Genuinely contested';
+  if (l <= 8) return 'Two believable stories';
+  return 'Nation-splitting';
+}
+
+/** Guidance injected into the CASE GENERATOR: how contested the facts are.
+ * Low = the record points firmly one way (the sport is taking the uphill
+ * side); high = the kind of case that splits the public for years. */
 export function generationGuidance(level) {
   const l = clampLevel(level);
-  if (l <= 3) {
-    return 'Balance: make the case CLEAR-CUT. One side\'s evidence should be strong and mutually corroborating with only token counterarguments; witnesses are consistent; there are no serious evidentiary fights. A beginner should be able to see the winning path.';
+  if (l <= 2) {
+    return 'Complexity: OPEN-AND-SHUT. The evidence overwhelmingly favors one side — clean forensics, consistent witnesses, a coherent timeline — and any fair reading of the record points to one verdict. But build honest handholds for the underdog side: one procedural soft spot, one witness who overreaches, one inference the favored side treats as more certain than the record supports. The case is only interesting if you take the losing side — make that a real, if steep, climb.';
+  }
+  if (l <= 4) {
+    return 'Complexity: STRONG BUT NOT AIRTIGHT. One side is clearly favored, but give the record genuine soft spots: a key witness with credibility baggage, one exhibit with a foundation wobble, one alternative reading of the physical evidence that a diligent advocate can develop.';
   }
   if (l <= 6) {
-    return 'Balance: make the case GENUINELY CONTESTED but tractable. Each side has real evidence and real weaknesses; two or three legitimate evidentiary fights (a hearsay problem, a foundation gap, one expert dispute); at least one witness with credibility baggage on each side.';
+    return 'Complexity: GENUINELY CONTESTED. Each side has real evidence and real weaknesses; two or three legitimate evidentiary fights (a hearsay problem, a foundation gap, one expert dispute); at least one witness with credibility baggage on each side.';
   }
-  return 'Balance: make the case a KNIFE FIGHT. Deeply ambiguous facts where both theories are plausible; forensic evidence that cuts both ways with dueling experts; multiple layered evidentiary landmines (hearsay within hearsay, Daubert-vulnerable science, prior-acts fights, chain-of-custody gaps); witnesses whose credibility is genuinely uncertain; no easy path for either side.';
+  if (l <= 8) {
+    return 'Complexity: TWO BELIEVABLE STORIES. Deeply ambiguous facts where both theories are plausible; forensic evidence that cuts both ways with dueling experts; layered evidentiary landmines (hearsay within hearsay, Daubert-vulnerable science, prior-acts fights, chain-of-custody gaps); witnesses whose credibility is genuinely uncertain.';
+  }
+  return 'Complexity: NATION-SPLITTING — the register of the true-crime documentary cases that divide the public for years. EVERY pillar of the prosecution case must have a genuine counter-narrative (possible contamination, an investigator with a plausible bias allegation, a timeline hole, a confession or statement obtained under questionable circumstances), and there must be a fully-formed alternative account of the death (another suspect with motive and opportunity, or a credible accident/suicide theory) that the defense can build a whole case around. Both narratives must survive scrutiny of the complete record; reasonable jurors should be able to end on opposite verdicts, and a hung jury is a legitimate outcome. No strawmen on either side.';
 }

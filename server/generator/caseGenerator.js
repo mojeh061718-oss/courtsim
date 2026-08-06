@@ -10,7 +10,7 @@
  * crimes) and live in an in-memory registry alongside the shipped cases.
  */
 import { chat } from '../llm/grokClient.js';
-import { generationGuidance, clampLevel, difficultyLabel } from '../engine/difficulty.js';
+import { generationGuidance, clampLevel, complexityLabel } from '../engine/difficulty.js';
 import { nextId, hash01 } from '../engine/util.js';
 
 const registry = new Map(); // id -> caseFile
@@ -67,7 +67,7 @@ const GENERATOR_SYSTEM = `You are a master case-file author for a mock-trial tra
 
 function generatorPrompt(theme, level) {
   return `Create a fictional murder case file. ${theme ? `Requested theme/setting: "${theme}".` : 'Choose a fresh, interesting setting (vary region, milieu, and murder mechanics).'}
-Difficulty ${level}/10 (${difficultyLabel(level)}). ${generationGuidance(level)}
+Case complexity ${level}/10 (${complexityLabel(level)}). ${generationGuidance(level)}
 
 Return ONLY this JSON shape (all fields required):
 {
@@ -162,7 +162,7 @@ function normalize(raw, theme, level) {
     title: str(c.title, 'State v. Doe'),
     jurisdiction: str(c.jurisdiction, 'Simulated County Court'),
     caseNumber: str(c.caseNumber, `Case No. SIM-${id.slice(-6).toUpperCase()}`),
-    status: `Fictional generated case — difficulty ${level}/10 (${difficultyLabel(level)})`,
+    status: `Fictional generated case — complexity ${level}/10 (${complexityLabel(level)})`,
     blurb: str(c.blurb, 'A generated murder trial.'),
     disclaimer: 'Entirely fictional case generated for training. Any resemblance to real persons or events is coincidental.',
     parties: {
