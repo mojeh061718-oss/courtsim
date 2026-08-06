@@ -61,10 +61,34 @@
       u.pitch = tune.pitch;
       const v = pickVoice(role);
       if (v) u.voice = v;
-      u.onend = resolve;
-      u.onerror = resolve;
+      // iOS/Chrome occasionally pause long syntheses; nudge them along.
+      const watchdog = setInterval(() => {
+        if (synth.paused) synth.resume();
+      }, 3000);
+      const done = () => {
+        clearInterval(watchdog);
+        resolve();
+      };
+      u.onend = done;
+      u.onerror = done;
       synth.speak(u);
     });
+  }
+
+  /* iOS Safari requires a user gesture before audio may start. Called once
+   * from the first touch/click — speaks a silent utterance to unlock. */
+  let unlocked = false;
+  function unlock() {
+    if (unlocked || !synth) return;
+    unlocked = true;
+    try {
+      const u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0;
+      synth.speak(u);
+      loadVoices();
+    } catch {
+      /* no-op */
+    }
   }
 
   async function pump() {
@@ -88,6 +112,8 @@
   }
 
   window.CourtSpeech = {
+    /** Unlock audio on iOS — call from the first user gesture. */
+    unlock,
     /** Queue an event for narration. paragraphs: string[]. */
     enqueue({ eventId, paragraphs, role, onParagraph, onDone }) {
       queue.push({ eventId, paragraphs, role, onParagraph, onDone });

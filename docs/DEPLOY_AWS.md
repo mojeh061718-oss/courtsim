@@ -34,6 +34,14 @@ eb init courtsim --platform node.js-20 && eb create courtsim-env
 eb setenv GROK_API_KEY=xai-… GROK_MODEL=grok-4
 ```
 
+## PWA requirement: HTTPS
+
+CourtSim ships as an installable PWA (manifest + service worker). Service workers and
+Add-to-Home-Screen require a **secure origin**, so serve the app over HTTPS in
+production — App Runner and ALB-fronted ECS give you TLS termination out of the box
+(`localhost` is exempt during development). After deploying a new build, bump the
+`CACHE` version in `client/sw.js` so installed clients pick up the fresh shell.
+
 ## Notes
 
 - **Health check**: `GET /api/health` returns `{ok, liveModel, sessions}`.

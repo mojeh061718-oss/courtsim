@@ -115,7 +115,12 @@
           onDone: clearHighlight,
         });
       }
-      S.lastSpokenTarget = ev.speak ? { eventId: ev.id } : S.lastSpokenTarget;
+      // Track the last *objectionable* speaker (counsel/witness) so an
+      // objection raised after speech ends lands on their words, not the
+      // judge's procedural lines.
+      if (ev.speak && ['ai_counsel', 'witness'].includes(ev.actor)) {
+        S.lastSpokenTarget = { eventId: ev.id };
+      }
       if (ev.actor === 'juror') flashJuror(ev.name);
     }
     maybeAutoAdvance();
@@ -253,7 +258,12 @@
       const wit = S.selectedCase.witnesses.find((x) => x.id === item.dataset.witnessId);
       const mine = wit && wit.side === st.userSide;
       item.classList.toggle('callable', Boolean(callable && mine));
-      item.onclick = callable && mine ? () => send({ type: 'call_witness', witnessId: wit.id }) : null;
+      item.onclick = callable && mine
+        ? () => {
+            document.body.classList.remove('drawer-open');
+            send({ type: 'call_witness', witnessId: wit.id });
+          }
+        : null;
       item.title = callable && mine ? 'Click to call this witness' : '';
     });
   }
@@ -523,6 +533,30 @@
     CourtSpeech.setMuted(!CourtSpeech.muted);
     $('#btn-mute').textContent = CourtSpeech.muted ? '🔇 Voice off' : '🔊 Voice on';
   };
+
+  /* ================= PWA / mobile ================= */
+
+  // iOS requires a user gesture before speech may play — unlock on first touch.
+  const unlockOnce = () => {
+    CourtSpeech.unlock();
+    document.removeEventListener('touchend', unlockOnce);
+    document.removeEventListener('click', unlockOnce);
+  };
+  document.addEventListener('touchend', unlockOnce, { once: false });
+  document.addEventListener('click', unlockOnce, { once: false });
+
+  // Court-file drawer (bottom sheet on phones).
+  const toggleDrawer = (open) => {
+    document.body.classList.toggle('drawer-open', open ?? !document.body.classList.contains('drawer-open'));
+  };
+  $('#btn-drawer').onclick = () => toggleDrawer();
+  $('#drawer-handle').onclick = () => toggleDrawer(false);
+  $('#drawer-backdrop').onclick = () => toggleDrawer(false);
+
+  // Installable app shell.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+  }
 
   boot().catch((e) => alert('Failed to load CourtSim: ' + e.message));
 })();

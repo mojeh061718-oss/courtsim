@@ -30,6 +30,14 @@ Practice arguing real cases **end-to-end** against an AI opposing counsel powere
   rounds — speaking, disagreeing, voting — until they return a unanimous verdict or hang.
 - **Natural voice.** Every AI actor speaks via the browser's speech engine at courtroom
   pace, with distinct voices per role. Interrupt at any point with **Space** or **O**.
+- **Installable PWA, optimized for iPhone 16 Pro.** Standalone app manifest, service
+  worker with app-shell caching, portrait courtroom layout with safe-area handling for
+  the Dynamic Island and home indicator, a bottom-sheet "Court file" drawer (jury,
+  witnesses, evidence, motions), thumb-reach objection button, and objection/response
+  modals that present as bottom sheets. On iPhone: open the site in Safari →
+  **Share → Add to Home Screen** — it launches full-screen like a native app. iOS speech
+  is unlocked on your first tap (an Apple requirement), and uses the high-quality Siri
+  voices installed on the phone.
 
 ## Run it
 
