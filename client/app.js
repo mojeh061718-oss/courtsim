@@ -158,10 +158,12 @@
       renderEvent(ev);
       if (ev.speak && !CourtSpeech.muted) {
         const paragraphs = ev.paragraphList && ev.paragraphList.length ? ev.paragraphList : [ev.text];
+        const seat = ev.actor === 'juror' ? Number((ev.name.match(/Juror (\d+)/) || [])[1] || 0) : 0;
         CourtSpeech.enqueue({
           eventId: ev.id,
           paragraphs,
           role: ev.actor,
+          key: seat,
           onParagraph: highlightParagraph,
           onDone: clearHighlight,
         });

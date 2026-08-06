@@ -5,6 +5,7 @@ import { OBJECTION_BASES } from '../engine/objections.js';
 import { researchCase } from '../research/publicData.js';
 import { buildTranscript } from '../engine/transcript.js';
 import { generateCase } from '../generator/caseGenerator.js';
+import { synthesize } from '../tts/polly.js';
 import { hasLiveModel, providerInfo } from '../llm/grokClient.js';
 
 const router = Router();
@@ -48,6 +49,21 @@ router.post('/trial', (req, res) => {
   const { state, events } = createTrial(caseFile, side, difficulty);
   sessions.set(state.id, { state, caseFile });
   res.json({ trialId: state.id, events, state: publicState(state, caseFile) });
+});
+
+router.post('/tts', async (req, res) => {
+  const { text, role, key } = req.body || {};
+  if (!text || !String(text).trim()) return res.status(400).json({ error: 'no text' });
+  try {
+    const audio = await synthesize({ text: String(text), role: String(role || 'witness'), key });
+    if (!audio) return res.status(503).json({ error: 'tts unavailable' });
+    res.set('Content-Type', 'audio/mpeg');
+    res.set('Cache-Control', 'no-store');
+    res.send(audio);
+  } catch (err) {
+    console.error('[tts]', err);
+    res.status(503).json({ error: 'tts failed' });
+  }
 });
 
 router.post('/generate-case', async (req, res) => {
