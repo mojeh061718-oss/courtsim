@@ -40,6 +40,16 @@ creates/updates an **App Runner** service in `us-east-1`. The deploy job skips i
 Add the five secrets, re-run the workflow (or push to main), and the job prints the
 service URL at the end. Subsequent pushes redeploy automatically.
 
+**Fastest path — one command.** On a machine with the `aws` and `gh` CLIs logged in:
+
+```bash
+./scripts/setup-deploy.sh
+```
+
+It creates the scoped deploy IAM user (`scripts/deploy-policy.json`), the App Runner
+ECR role, mints the access keys, sets all five GitHub secrets, and triggers the first
+deployment — the run prints your HTTPS service URL when it stabilizes.
+
 ## Option A — AWS App Runner (manual, no Actions)
 
 1. Build and push the image:

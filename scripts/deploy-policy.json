@@ -1,0 +1,10 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    { "Effect": "Allow", "Action": ["ecr:GetAuthorizationToken"], "Resource": "*" },
+    { "Effect": "Allow", "Action": ["ecr:CreateRepository", "ecr:DescribeRepositories"], "Resource": "*" },
+    { "Effect": "Allow", "Action": ["ecr:*"], "Resource": "arn:aws:ecr:us-east-1:*:repository/courtsim" },
+    { "Effect": "Allow", "Action": ["apprunner:*"], "Resource": "*" },
+    { "Effect": "Allow", "Action": ["iam:PassRole"], "Resource": "arn:aws:iam::*:role/CourtsimAppRunnerECRAccess" }
+  ]
+}
