@@ -625,10 +625,25 @@
     }
   }
 
-  function sendText() {
+  async function cleanDictation(text) {
+    if (window.CourtSettings.cleanup === false || text.length < 12) return text;
+    try {
+      const r = await api('/cleanup', {
+        method: 'POST',
+        timeoutMs: 15000,
+        body: JSON.stringify({ text, caseId: S.selectedCase?.id }),
+      });
+      return r.text || text;
+    } catch {
+      return text;
+    }
+  }
+
+  async function sendText() {
     const input = $('#input-text');
-    const text = input.value.trim();
+    let text = input.value.trim();
     if (!text) return;
+    text = await cleanDictation(text);
     const st = S.state;
     let action = null;
     if (st.pending) action = { type: 'respond', text };
@@ -778,7 +793,7 @@
     { id: 'Kimberly', label: 'Kimberly — bright, engaged (F)' },
     { id: 'Salli', label: 'Salli — light, quick (F)' },
   ];
-  const DEFAULT_SETTINGS = { speed: 1, judge: 'Matthew', counsel: 'Stephen', clerk: 'Joanna', witnessM: 'Gregory', witnessF: 'Ruth' };
+  const DEFAULT_SETTINGS = { speed: 1, judge: 'Matthew', counsel: 'Stephen', clerk: 'Joanna', witnessM: 'Gregory', witnessF: 'Ruth', cleanup: true };
 
   function loadSettings() {
     try {
@@ -815,6 +830,12 @@
         CourtSpeech.preview(sel.value);
       };
     }
+    const cb = $('#set-cleanup');
+    cb.checked = window.CourtSettings.cleanup !== false;
+    cb.onchange = () => {
+      window.CourtSettings.cleanup = cb.checked;
+      saveSettings();
+    };
     const speed = $('#set-speed');
     speed.value = String(window.CourtSettings.speed);
     const paint = () => { $('#speed-val').textContent = Number(speed.value).toFixed(2).replace(/0$/, '') + '×'; };
