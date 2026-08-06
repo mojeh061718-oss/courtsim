@@ -317,10 +317,12 @@ input[type="range"] { accent-color: var(--brass); width: 100%; }
   .drawer-backdrop { position: fixed; inset: 0; background: #0009; z-index: 29; }
   body.drawer-open .drawer-backdrop { display: block; }
   .left-col .panel { border: none; padding: 8px 0; }
+  /* The drawer is the user's notes, not a spectator view: the jury grid adds
+     nothing here (jurors speak in the transcript), so its space goes to the
+     binder / war room / dockets instead. */
+  .jury-panel { display: none; }
   .dockets { min-height: 220px; }
-  .tab-body { max-height: 34dvh; }
-  .jury-box { grid-template-columns: repeat(6, 1fr); }
-  .juror { font-size: 0.6rem; }
+  .tab-body { max-height: 58dvh; }
 
   /* Controls: thumb reach + home-indicator clearance; 16px inputs stop iOS zoom */
   .controls { padding: 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); border-radius: 14px 14px 0 0; }
