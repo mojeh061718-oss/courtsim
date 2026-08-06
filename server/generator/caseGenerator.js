@@ -84,7 +84,7 @@ Return ONLY this JSON shape (all fields required):
       "verdictOptions": ["guilty_of_<top>", "guilty_of_<lesser>", "not_guilty"], "lesserNote": "<one sentence>" }
   ],
   "juryInstructions": "<150-250 words: presumption of innocence, burden, element definitions for top and lesser charges, how to consider counts>",
-  "witnesses": [8-10 of: { "id": "<snake_case>", "name": "<name>", "side": "prosecution"|"defense",
+  "witnesses": [8-10 of: { "id": "<snake_case>", "name": "<name>", "side": "prosecution"|"defense", "gender": "m"|"f",
       "description": "<role in the case>", "demeanor": "<how they present on the stand>",
       "knowledge": "<80-130 words: EVERYTHING this witness personally knows — their complete testimony universe, including weaknesses and what they must concede on cross>" }],
   "evidence": [14-20 of: { "id": "<snake_case>", "label": "Exhibit N: <name>", "desc": "<one sentence>", "offeredBy": "prosecution"|"defense"|"both" }],
@@ -128,6 +128,7 @@ function normalize(raw, theme, level) {
       id: str(w?.id, `witness_${i + 1}`).replace(/\W/g, '_'),
       name: str(w?.name, `Witness ${i + 1}`),
       side: w?.side === 'defense' ? 'defense' : 'prosecution',
+      gender: w?.gender === 'f' ? 'f' : 'm',
       description: str(w?.description, 'witness'),
       demeanor: str(w?.demeanor, 'composed'),
       knowledge: str(w?.knowledge, 'Has limited direct knowledge of the events.'),

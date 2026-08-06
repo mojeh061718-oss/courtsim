@@ -19,8 +19,10 @@ const CAST = {
   ai_counsel: 'Stephen',
   witness: 'Ruth',
   clerk: 'Joanna',
-  juror: ['Joanna', 'Kevin', 'Ruth', 'Matthew', 'Ivy', 'Stephen', 'Kendra', 'Joey', 'Salli', 'Justin', 'Kimberly', 'Danielle'],
+  juror: ['Joanna', 'Gregory', 'Ruth', 'Matthew', 'Kendra', 'Stephen', 'Kimberly', 'Joey', 'Salli', 'Danielle', 'Joanna', 'Matthew'],
 };
+// Voices the settings menu may request explicitly (adult en-US).
+export const ALLOWED_VOICES = ['Joanna', 'Ruth', 'Danielle', 'Kendra', 'Kimberly', 'Salli', 'Matthew', 'Stephen', 'Gregory', 'Joey'];
 const ENGINES = ['generative', 'neural', 'standard'];
 // Not every voice exists on every engine; remember what worked.
 const engineCache = new Map(); // voiceId -> engine
@@ -36,9 +38,9 @@ export function voiceFor(role, key) {
   return v;
 }
 
-export async function synthesize({ text, role, key }) {
+export async function synthesize({ text, role, key, voice }) {
   if (pollyDown && Date.now() < pollyDownUntil) return null;
-  const voiceId = voiceFor(role, key);
+  const voiceId = ALLOWED_VOICES.includes(voice) ? voice : voiceFor(role, key);
   const clean = String(text).slice(0, 2900); // Polly per-request limit ~3000 chars
   const startEngine = engineCache.get(voiceId);
   const engines = startEngine ? [startEngine, ...ENGINES.filter((e) => e !== startEngine)] : ENGINES;

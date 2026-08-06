@@ -776,7 +776,7 @@ function userEv(state, caseFile, text, kind) {
 
 function witnessEv(state, caseFile, text) {
   const w = witnessOf(state, caseFile);
-  return { id: nextId(), actor: 'witness', name: w.name, side: null, text, kind: 'answer', speak: true, meta: {} };
+  return { id: nextId(), actor: 'witness', name: w.name, side: null, text, kind: 'answer', speak: true, meta: { gender: w.gender || null } };
 }
 
 function witnessOf(state, caseFile) {
