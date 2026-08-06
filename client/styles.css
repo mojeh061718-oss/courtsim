@@ -122,6 +122,22 @@ input[type="range"] { accent-color: var(--brass); width: 100%; }
 .docket-item.callable:hover { background: var(--panel-2); }
 .docket-item .side-tag { font-size: 0.68rem; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--line); margin-left: 6px; color: var(--ink-dim); }
 
+/* Trial binder — counsel-table case notes */
+#binder-search {
+  width: 100%; box-sizing: border-box; margin-bottom: 8px;
+  background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 8px; padding: 8px 10px; font-family: inherit; font-size: 16px;
+}
+.binder-section { border-bottom: 1px solid var(--line); padding: 2px 0; }
+.binder-section summary {
+  cursor: pointer; padding: 8px 4px; color: var(--brass); font-size: 0.85rem;
+  letter-spacing: 0.04em; user-select: none;
+}
+.binder-section summary:hover { color: var(--ink); }
+.binder-item { padding: 6px 6px 8px 10px; border-left: 2px solid var(--line); margin: 0 0 8px 4px; }
+.binder-item .bi-head { color: var(--ink); font-size: 0.85rem; margin-bottom: 3px; font-weight: bold; }
+.binder-item .bi-body { color: var(--ink-dim); font-size: 0.82rem; line-height: 1.5; white-space: pre-wrap; }
+
 .center-col { display: flex; flex-direction: column; min-height: 0; gap: 8px; }
 .transcript {
   flex: 1; overflow-y: auto; background: var(--panel); border: 1px solid var(--line);

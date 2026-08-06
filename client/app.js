@@ -151,6 +151,7 @@
     $('#hdr-case').textContent = S.selectedCase.title;
     renderJury();
     renderDockets();
+    loadBinder();
     ingestEvents(r.events);
     renderControls();
   }
@@ -254,6 +255,92 @@
       box.appendChild(n);
     }
   }
+
+  /* ================= trial binder (counsel-table case notes) ================= */
+
+  async function loadBinder() {
+    try {
+      S.binder = await api(`/cases/${S.selectedCase.id}/binder`);
+      renderBinder();
+    } catch (err) {
+      $('#binder-content').textContent = 'Could not load the case binder: ' + err.message;
+    }
+  }
+
+  function renderBinder() {
+    const b = S.binder;
+    const root = $('#binder-content');
+    root.innerHTML = '';
+    if (!b) return;
+
+    const section = (title, open = false) => {
+      const d = el('details', 'binder-section');
+      if (open) d.open = true;
+      d.appendChild(el('summary', null, title));
+      root.appendChild(d);
+      return d;
+    };
+    const item = (parent, head, body) => {
+      const n = el('div', 'binder-item');
+      if (head) n.appendChild(el('div', 'bi-head', head));
+      if (body) n.appendChild(el('div', 'bi-body', body));
+      parent.appendChild(n);
+      return n;
+    };
+
+    const mySide = S.state?.userSide || 'prosecution';
+    const oppSide = mySide === 'prosecution' ? 'defense' : 'prosecution';
+
+    const facts = section('Facts of the case', true);
+    for (const para of String(b.factSummary).split(/(?<=\.)\s+(?=[A-Z])/g).reduce((acc, s) => {
+      // group sentences into readable chunks of ~2-3
+      const last = acc[acc.length - 1];
+      if (last && last.count < 3 && (last.text + s).length < 420) { last.text += ' ' + s; last.count++; }
+      else acc.push({ text: s, count: 1 });
+      return acc;
+    }, [])) {
+      item(facts, null, para.text);
+    }
+
+    const theory = section('Theory of the case');
+    item(theory, `YOUR theory (${mySide})`, b.theories[mySide]);
+    item(theory, `Opposing theory (${oppSide})`, b.theories[oppSide]);
+
+    const charges = section('Charges & elements');
+    for (const ch of b.charges) {
+      item(charges, ch.name, `Elements: ${ch.elements.join(' • ')}\nVerdict options: ${ch.verdictOptions.map((v) => v.replace(/_/g, ' ')).join(' / ')}${ch.lesserNote ? '\n' + ch.lesserNote : ''}`);
+    }
+
+    const wit = section('Witness notes (what each witness knows)');
+    for (const w of b.witnesses) {
+      item(wit, `${w.name} — ${w.side}`, `${w.description}\nDemeanor: ${w.demeanor}\nKNOWS: ${w.knowledge}`);
+    }
+
+    const ex = section('Exhibits');
+    for (const e of b.evidence) {
+      item(ex, e.label, `${e.desc} — offered by ${e.offeredBy}`);
+    }
+
+    const instr = section('Jury instructions (the law they will apply)');
+    item(instr, null, b.juryInstructions);
+
+    const parties = section('Parties & court');
+    item(parties, null, `${b.title}${b.caseNumber ? ' — ' + b.caseNumber : ''}\nPresiding: Hon. ${b.parties.judge}\nDefendant: ${b.parties.defendant}\nVictim(s): ${b.parties.victims.join('; ')}\nProsecution: ${b.parties.prosecutor}\nDefense: ${b.parties.defenseCounsel}`);
+  }
+
+  $('#binder-search').addEventListener('input', () => {
+    const q = $('#binder-search').value.trim().toLowerCase();
+    document.querySelectorAll('#binder-content .binder-section').forEach((sec) => {
+      let visible = 0;
+      sec.querySelectorAll('.binder-item').forEach((it) => {
+        const hit = !q || it.textContent.toLowerCase().includes(q);
+        it.classList.toggle('hidden', !hit);
+        if (hit) visible++;
+      });
+      sec.classList.toggle('hidden', q && visible === 0);
+      if (q && visible) sec.open = true;
+    });
+  });
 
   function renderDockets() {
     const w = $('#tab-witnesses');
