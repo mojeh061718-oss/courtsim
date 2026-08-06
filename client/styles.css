@@ -1,4 +1,15 @@
+/* Typeface: modern, narrow, clean. Barlow Condensed carries display text
+   (wordmark, headers, buttons); Barlow Semi Condensed carries body copy —
+   condensed enough to feel sharp, open enough to read a transcript in. */
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 500; font-display: swap; src: url(fonts/BarlowCondensed-500.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Condensed'; font-style: normal; font-weight: 600 800; font-display: swap; src: url(fonts/BarlowCondensed-600.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Semi Condensed'; font-style: normal; font-weight: 400; font-display: swap; src: url(fonts/BarlowSemiCondensed-400.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Semi Condensed'; font-style: normal; font-weight: 500; font-display: swap; src: url(fonts/BarlowSemiCondensed-500.woff2) format('woff2'); }
+@font-face { font-family: 'Barlow Semi Condensed'; font-style: normal; font-weight: 600 800; font-display: swap; src: url(fonts/BarlowSemiCondensed-600.woff2) format('woff2'); }
+
 :root {
+  --font-display: 'Barlow Condensed', 'Avenir Next Condensed', 'Arial Narrow', system-ui, sans-serif;
+  --font-body: 'Barlow Semi Condensed', 'Avenir Next', -apple-system, 'Segoe UI', Roboto, system-ui, sans-serif;
   --bg: #12100d;
   --panel: #1c1915;
   --panel-2: #232019;
@@ -25,9 +36,15 @@ html, body {
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: 'Times New Roman', Georgia, serif;
+  font-family: var(--font-body);
   max-width: 100vw;
 }
+h1, h2, h3, h4, .btn, .tab, .phase-badge, .chip, .subline-text, .docket-title,
+.binder-section summary, .gen-label, .complexity-ends, .ev .who, .side-tag {
+  font-family: var(--font-display);
+}
+.btn { font-weight: 500; letter-spacing: 0.03em; }
+b, strong, .binder-item .bi-head, .docket-item .t { font-weight: 600; }
 .hidden { display: none !important; }
 kbd { background: #2a261e; border: 1px solid #443c2c; border-radius: 4px; padding: 0 5px; font-family: monospace; }
 
@@ -53,40 +70,110 @@ button, .btn, .tab, .docket-item, textarea, select { touch-action: manipulation;
 /* Quick-binder lives in the thumb row on phones; desktop has the panel in view */
 .binder-quick { display: none; }
 @media (max-width: 760px) { .binder-quick { display: inline-block; } }
-.select-header { text-align: center; padding: 48px 16px 12px; }
-.select-header h1 { font-size: 2.6rem; letter-spacing: 0.18em; margin: 0; color: var(--brass); }
-.tagline { max-width: 720px; margin: 12px auto; color: var(--ink-dim); }
+/* The lobby: quiet, dark, brass-lit — a building you'd trust with a verdict */
+#screen-select {
+  background:
+    radial-gradient(1100px 520px at 50% -8%, #2b2314b8, transparent 70%),
+    radial-gradient(900px 420px at 50% 108%, #171209, transparent 70%),
+    var(--bg);
+}
+.select-header { text-align: center; padding: 44px 16px 6px; }
+.seal-wrap { display: flex; justify-content: center; margin-bottom: 14px; }
+.seal { width: 108px; height: 108px; filter: drop-shadow(0 0 18px #c9a24b26); }
+.wordmark {
+  margin: 0; font-family: var(--font-display); font-size: clamp(2.5rem, 10.5vw, 3.6rem); font-weight: 600;
+  letter-spacing: 0.26em; text-indent: 0.26em; /* re-center the tracked text */
+  background: linear-gradient(180deg, #f0d996, #c9a24b 55%, #a07f38);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: #c9a24b;
+}
+.subline {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  margin: 8px auto 0; max-width: 420px;
+}
+.subline-text {
+  font-size: 0.72rem; letter-spacing: 0.34em; text-indent: 0.34em;
+  text-transform: uppercase; color: var(--ink-dim); white-space: nowrap;
+}
+.rule { flex: 1; max-width: 90px; height: 1px; background: linear-gradient(90deg, transparent, #c9a24b66); }
+.subline .rule:last-child, .docket-title .rule:last-child { background: linear-gradient(90deg, #c9a24b66, transparent); }
+.tagline { max-width: 640px; margin: 14px auto 4px; color: var(--ink-dim); font-style: italic; font-size: 0.95rem; }
+
+/* Case creator — the drafting desk */
 .generator-panel {
-  max-width: 860px; margin: 0 auto 8px; width: calc(100% - 48px);
-  background: var(--panel); border: 1px solid var(--brass); border-radius: var(--radius);
-  padding: 16px 18px;
+  max-width: 720px; margin: 18px auto 8px; width: calc(100% - 40px);
+  background: linear-gradient(180deg, #221d14, #1b1710);
+  border: 1px solid #c9a24b55; border-radius: 14px;
+  padding: 20px 22px 18px;
+  box-shadow: 0 18px 50px #00000059, inset 0 1px 0 #ffffff0d;
 }
-.generator-panel h3 { margin: 0 0 10px; color: var(--brass); font-size: 1rem; letter-spacing: 0.04em; }
-.gen-row { margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+.gen-head h3 { margin: 0 0 4px; color: var(--brass); font-size: 1.15rem; letter-spacing: 0.08em; }
+.gen-sub { margin: 0 0 14px; color: var(--ink-dim); font-size: 0.84rem; line-height: 1.45; }
+.gen-row { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
 .gen-row input[type="text"] {
-  background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
-  border-radius: 8px; padding: 10px; font-family: inherit; font-size: 16px;
+  background: #14100a; color: var(--ink); border: 1px solid var(--line);
+  border-radius: 10px; padding: 12px; font-family: inherit; font-size: 16px;
 }
-.gen-label { font-size: 0.85rem; color: var(--ink-dim); }
+.gen-row input[type="text"]:focus { outline: none; border-color: #c9a24b88; }
+.gen-label { font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-dim); }
 .gen-label span { color: var(--brass); }
 input[type="range"] { accent-color: var(--brass); width: 100%; }
 .gen-status { color: var(--ink-dim); font-size: 0.85rem; }
-.generator-panel .gen-row:last-child { flex-direction: row; align-items: center; gap: 12px; margin-bottom: 0; }
 .side-difficulty { margin: 14px 0 4px; }
 
+/* Complexity slider: how contested the truth itself is */
+.complexity-block { background: #16110b; border: 1px solid #35302644; border-radius: 12px; padding: 12px 14px 10px; }
+.complexity-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.complexity-value { color: var(--brass); font-size: 0.88rem; white-space: nowrap; }
+.complexity-slider { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 999px; margin: 12px 0 6px;
+  background: linear-gradient(90deg, #4e7a4e88, #c9a24b88 55%, #b03a2e88); outline: none; }
+.complexity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f0d996, #c9a24b 60%, #8a6b2c);
+  border: 2px solid #1b1710; box-shadow: 0 0 0 1px #c9a24b88, 0 2px 8px #000a; cursor: pointer;
+}
+.complexity-slider::-moz-range-thumb {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f0d996, #c9a24b 60%, #8a6b2c);
+  border: 2px solid #1b1710; box-shadow: 0 0 0 1px #c9a24b88, 0 2px 8px #000a; cursor: pointer;
+}
+.complexity-ends { display: flex; justify-content: space-between; font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-dim); }
+.complexity-desc { margin: 8px 0 0; color: var(--ink-dim); font-size: 0.82rem; line-height: 1.5; min-height: 2.4em; }
+.gen-actions { flex-direction: row; align-items: center; gap: 12px; margin-bottom: 0; }
+.gen-btn {
+  padding: 12px 22px; font-size: 1rem; border-radius: 10px;
+  background: linear-gradient(180deg, #dcb866, #b8933f);
+  box-shadow: 0 4px 14px #c9a24b2e;
+}
+
+/* The docket */
+.docket-title {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin: 26px auto 0; max-width: 560px; padding: 0 24px;
+  font-size: 0.78rem; font-weight: normal; letter-spacing: 0.26em; text-indent: 0;
+  text-transform: uppercase; color: var(--ink-dim); white-space: nowrap;
+}
+.docket-title .rule { max-width: none; }
 .case-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px; padding: 24px; max-width: 1280px; margin: 0 auto; width: 100%;
+  gap: 16px; padding: 20px 24px 24px; max-width: 1280px; margin: 0 auto; width: 100%;
 }
 .case-card {
-  background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
-  padding: 18px; cursor: pointer; transition: border-color 0.15s;
+  position: relative; overflow: hidden;
+  background: linear-gradient(180deg, #201b13, #1a1610);
+  border: 1px solid #35302666; border-left: 3px solid #6d4a2f;
+  border-radius: 12px; padding: 18px 18px 14px; cursor: pointer;
+  transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
 }
-.case-card:hover { border-color: var(--brass); }
-.case-card h3 { margin: 0 0 6px; color: var(--brass); font-size: 1.05rem; }
-.case-card .jur { color: var(--ink-dim); font-size: 0.82rem; margin-bottom: 8px; }
-.case-card p { font-size: 0.9rem; line-height: 1.45; }
-.case-card .charges { font-size: 0.8rem; color: var(--ink-dim); margin-top: 8px; }
+.case-card:hover, .case-card:active {
+  border-color: #c9a24b88; border-left-color: var(--brass);
+  transform: translateY(-2px); box-shadow: 0 14px 34px #00000066;
+}
+.case-card h3 { margin: 0 0 6px; color: var(--brass); font-size: 1.08rem; letter-spacing: 0.02em; }
+.case-card .jur { color: var(--ink-dim); font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px; }
+.case-card p { font-size: 0.9rem; line-height: 1.5; }
+.case-card .charges { font-size: 0.8rem; color: var(--ink-dim); margin-top: 10px; padding-top: 8px; border-top: 1px solid #35302644; }
+.case-card .cta { margin-top: 10px; color: var(--brass); font-size: 0.8rem; letter-spacing: 0.06em; }
 .side-picker { max-width: 900px; margin: 0 auto; padding: 24px; }
 .side-picker h2 { color: var(--brass); }
 .side-buttons { display: flex; gap: 12px; margin: 18px 0; flex-wrap: wrap; }

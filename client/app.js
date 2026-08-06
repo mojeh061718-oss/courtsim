@@ -144,6 +144,7 @@
       card.appendChild(el('div', 'jur', `${c.jurisdiction} · ${c.status}`));
       card.appendChild(el('p', null, c.blurb));
       card.appendChild(el('div', 'charges', c.charges.join(' · ')));
+      card.appendChild(el('div', 'cta', 'Take this case →'));
       card.onclick = () => showSidePicker(c.id);
       grid.appendChild(card);
     }
@@ -201,6 +202,23 @@
     if (l <= 8) return 'Veteran first chair';
     return 'Dream Team';
   }
+
+  // The generator slider measures the CASE, not the opponents: how contested
+  // the truth itself is, from open-and-shut to nation-splitting.
+  function complexityLabel(l) {
+    if (l <= 2) return 'Open-and-shut';
+    if (l <= 4) return 'Strong but not airtight';
+    if (l <= 6) return 'Genuinely contested';
+    if (l <= 8) return 'Two believable stories';
+    return 'Nation-splitting';
+  }
+  function complexityDesc(l) {
+    if (l <= 2) return 'The record points firmly one way — clean evidence, consistent witnesses. The challenge is choosing the uphill side and finding the honest angles anyway.';
+    if (l <= 4) return 'One side is clearly favored, but there are real soft spots: a witness with baggage, an exhibit that needs shoring up.';
+    if (l <= 6) return 'Both sides hold real evidence and real problems. Two or three legitimate evidentiary fights will decide it.';
+    if (l <= 8) return 'Dueling experts, disputed forensics, a credible alternative account. Either theory survives first contact.';
+    return 'A case the public would argue about for years — every pillar of the State\'s case has a counter-narrative, and honest jurors can land on opposite verdicts.';
+  }
   function bindSlider(rangeSel, valSel, labelSel) {
     const r = $(rangeSel);
     const update = () => {
@@ -211,7 +229,18 @@
     update();
     return r;
   }
-  bindSlider('#gen-difficulty', '#gen-diff-val', '#gen-diff-label');
+  // Generator slider speaks complexity; the pre-trial slider speaks opponent skill.
+  {
+    const r = $('#gen-difficulty');
+    const update = () => {
+      const l = Number(r.value);
+      $('#gen-diff-val').textContent = r.value;
+      $('#gen-diff-label').textContent = complexityLabel(l);
+      $('#gen-diff-desc').textContent = complexityDesc(l);
+    };
+    r.oninput = update;
+    update();
+  }
   bindSlider('#side-difficulty', '#side-diff-val', '#side-diff-label');
 
   $('#btn-generate').onclick = async () => {

@@ -1,13 +1,18 @@
 /* CourtSim service worker — app-shell caching for PWA install.
  * Static shell: cache-first with background refresh.
  * /api: network-only (trials are live), with a JSON offline fallback. */
-const CACHE = 'courtsim-v13';
+const CACHE = 'courtsim-v15';
 const SHELL = [
   '/',
   '/index.html',
   '/styles.css',
   '/app.js',
   '/speech.js',
+  '/fonts/BarlowCondensed-500.woff2',
+  '/fonts/BarlowCondensed-600.woff2',
+  '/fonts/BarlowSemiCondensed-400.woff2',
+  '/fonts/BarlowSemiCondensed-500.woff2',
+  '/fonts/BarlowSemiCondensed-600.woff2',
   '/manifest.webmanifest',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
