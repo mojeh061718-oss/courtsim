@@ -678,7 +678,16 @@
     if (st.pending) {
       banner.classList.remove('hidden');
       if (st.pending.type === 'motion_response') {
-        banner.textContent = `Opposing counsel has moved: "${st.pending.motionTitle}". The judge wants YOUR response before ruling. Argue it below and Send.`;
+        banner.innerHTML = '';
+        banner.appendChild(el('div', 'pb-main', `Opposing counsel has moved: "${st.pending.motionTitle}". The judge wants YOUR response before ruling. Argue it below and Send.`));
+        if (st.pending.motionBackground) {
+          // Bench memo: the facts behind the motion, so the user never argues blind.
+          const d = el('details', 'pending-bg');
+          d.appendChild(el('summary', null, '📋 Background — what this motion is really about'));
+          d.appendChild(el('div', 'pending-bg-body', st.pending.motionBackground));
+          d.open = true;
+          banner.appendChild(d);
+        }
         input.placeholder = 'Your Honor, we oppose the motion because…';
         hint.textContent = 'Respond to the motion, then the court will rule.';
       } else {
@@ -874,7 +883,12 @@
     // While something is pending (an objection against you, a motion needing
     // response), the banner text is the critical context — mirror it too.
     const banner = $('#pending-banner');
-    const bannerText = banner.classList.contains('hidden') ? '' : banner.textContent;
+    let bannerText = '';
+    if (!banner.classList.contains('hidden')) {
+      const main = banner.querySelector('.pb-main')?.textContent || banner.textContent;
+      const bg = banner.querySelector('.pending-bg-body')?.textContent;
+      bannerText = bg ? `${main}\n📋 ${bg}` : main;
+    }
     $('#war-hint').textContent = bannerText ? `⚠️ ${bannerText}` : $('#control-hint').textContent;
     $('#war-input').placeholder = $('#input-text').placeholder;
     const evs = document.querySelectorAll('#transcript .ev');

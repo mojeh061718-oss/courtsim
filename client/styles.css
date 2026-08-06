@@ -178,7 +178,10 @@ input[type="range"] { accent-color: var(--brass); width: 100%; }
 /* War-room court dock — address the court without leaving the sheet */
 .war-dock-wrap { position: sticky; top: 0; z-index: 3; background: var(--panel); padding-bottom: 6px; }
 .war-dock { border: 1px solid var(--brass); border-radius: 8px; padding: 8px; background: var(--panel-2); }
-.war-hint { color: var(--ink-dim); font-size: 0.74rem; margin-bottom: 6px; min-height: 1em; }
+.war-hint {
+  color: var(--ink-dim); font-size: 0.74rem; margin-bottom: 6px; min-height: 1em;
+  white-space: pre-wrap; max-height: 120px; overflow-y: auto;
+}
 .war-input-row { display: flex; gap: 6px; align-items: stretch; }
 .war-input-row textarea {
   flex: 1; min-width: 0; background: var(--panel); color: var(--ink);
@@ -220,7 +223,12 @@ input[type="range"] { accent-color: var(--brass); width: 100%; }
 .pending-banner {
   background: #33241a; border: 1px solid var(--danger); border-radius: 8px;
   padding: 10px 14px; font-size: 0.9rem;
+  max-height: 38dvh; overflow-y: auto;
 }
+/* Bench memo attached to a pending motion — the facts behind the fight */
+.pending-bg { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 6px; }
+.pending-bg summary { cursor: pointer; color: var(--brass); font-size: 0.8rem; user-select: none; }
+.pending-bg-body { color: var(--ink-dim); font-size: 0.82rem; line-height: 1.5; padding: 6px 2px 2px; white-space: pre-wrap; }
 .controls { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px; }
 .control-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
 .input-row { display: flex; gap: 8px; }

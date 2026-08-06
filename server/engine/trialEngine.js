@@ -867,7 +867,7 @@ export function publicState(state, caseFile) {
     phase: state.phase,
     openingTurn: state.openingTurn,
     closingTurn: state.closingTurn,
-    pending: state.pending ? { type: state.pending.type, motionTitle: state.pending.motion?.title, basis: state.pending.review?.basis, argument: state.pending.review?.argument } : null,
+    pending: state.pending ? { type: state.pending.type, motionTitle: state.pending.motion?.title, motionBackground: state.pending.motion?.background || null, basis: state.pending.review?.basis, argument: state.pending.review?.argument } : null,
     exam: state.exam
       ? { witness: witnessOf(state, caseFile)?.name, witnessId: state.exam.witnessId, stage: state.exam.stage, examinerIsUser: examinerIsUser(state), awaitingAnswer: Boolean(state.exam.pendingQuestion) }
       : null,

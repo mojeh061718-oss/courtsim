@@ -95,8 +95,8 @@ Return ONLY this JSON shape (all fields required):
       "knowledge": "<80-130 words: EVERYTHING this witness personally knows — their complete testimony universe, including weaknesses and what they must concede on cross>" }],
   "evidence": [14-20 of: { "id": "<snake_case>", "label": "Exhibit N: <name>", "desc": "<one sentence>", "offeredBy": "prosecution"|"defense"|"both" }],
   "aiPretrialMotions": {
-    "prosecution": [2 of: { "id": "p1", "title": "<motion in limine title>", "argument": "<2-3 sentence spoken argument>" }],
-    "defense": [2-3 of: { "id": "d1", "title": "<title>", "argument": "<2-3 sentences>" }]
+    "prosecution": [2 of: { "id": "p1", "title": "<motion in limine title>", "argument": "<2-3 sentence spoken argument>", "background": "<3-4 sentence neutral bench memo: the underlying facts the motion fights over, what is at stake if it is granted or denied, and one argument angle for EACH side>" }],
+    "defense": [2-3 of: { "id": "d1", "title": "<title>", "argument": "<2-3 sentences>", "background": "<same bench-memo format>" }]
   },
   "jurorPool": [12 of: { "seat": 1-12, "name": "<name>", "age": <25-72>, "occupation": "<job>",
       "background": "<one sentence of life experience relevant to how they weigh evidence>",
@@ -193,8 +193,8 @@ function normalize(raw, theme, level) {
         offeredBy: ['prosecution', 'defense', 'both'].includes(e?.offeredBy) ? e.offeredBy : 'prosecution',
       })),
     aiPretrialMotions: {
-      prosecution: arr(c.aiPretrialMotions?.prosecution).slice(0, 3).map((m, i) => ({ id: `p${i + 1}`, title: str(m?.title, 'Motion in limine'), argument: str(m?.argument, 'The State so moves.') })),
-      defense: arr(c.aiPretrialMotions?.defense).slice(0, 3).map((m, i) => ({ id: `d${i + 1}`, title: str(m?.title, 'Motion in limine'), argument: str(m?.argument, 'The defense so moves.') })),
+      prosecution: arr(c.aiPretrialMotions?.prosecution).slice(0, 3).map((m, i) => ({ id: `p${i + 1}`, title: str(m?.title, 'Motion in limine'), argument: str(m?.argument, 'The State so moves.'), background: str(m?.background, '') })),
+      defense: arr(c.aiPretrialMotions?.defense).slice(0, 3).map((m, i) => ({ id: `d${i + 1}`, title: str(m?.title, 'Motion in limine'), argument: str(m?.argument, 'The defense so moves.'), background: str(m?.background, '') })),
     },
     aliases: [],
     jurorPool,
