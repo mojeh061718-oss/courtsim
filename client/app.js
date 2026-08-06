@@ -804,9 +804,9 @@
       banner.appendChild(el('div', null, `${ch.name}: ${line}`));
     }
     const row = el('div', 'verdict-actions');
-    const view = el('button', 'btn primary small', '📄 Full transcript & juror sheet');
-    view.onclick = () => window.open(`/api/trial/${S.trialId}/transcript.html`, '_blank');
-    const dl = el('a', 'btn small', 'Download .txt');
+    const view = el('button', 'btn primary small', '📄 Transcript & juror sheet (PDF)');
+    view.onclick = () => window.open(`/api/trial/${S.trialId}/transcript.pdf`, '_blank');
+    const dl = el('a', 'btn small', '.txt');
     dl.href = `/api/trial/${S.trialId}/transcript.txt`;
     dl.setAttribute('download', '');
     const close = el('button', 'btn ghost small', 'Dismiss');
@@ -1058,7 +1058,7 @@
   };
 
   $('#btn-transcript').onclick = () => {
-    if (S.trialId) window.open(`/api/trial/${S.trialId}/transcript.html`, '_blank');
+    if (S.trialId) window.open(`/api/trial/${S.trialId}/transcript.pdf`, '_blank');
   };
 
   $('#btn-mute').onclick = () => {

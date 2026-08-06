@@ -4,6 +4,7 @@ import { createTrial, handleAction, publicState } from '../engine/trialEngine.js
 import { OBJECTION_BASES } from '../engine/objections.js';
 import { researchCase } from '../research/publicData.js';
 import { buildTranscript } from '../engine/transcript.js';
+import { renderTranscriptPdf } from '../engine/transcriptPdf.js';
 import { generateCase, registerGeneratedCase } from '../generator/caseGenerator.js';
 import { buildStrategySheet } from '../engine/strategy.js';
 import { saveTrial, loadTrial, deleteTrial, purgeCompleted, storeHealthy } from '../engine/store.js';
@@ -223,6 +224,21 @@ router.get('/trial/:id/transcript.txt', async (req, res) => {
     res.send(text);
   } catch (err) {
     console.error('[transcript]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/trial/:id/transcript.pdf', async (req, res) => {
+  const s = getSession(req.params.id);
+  if (!s) return res.status(404).json({ error: 'unknown trial' });
+  try {
+    const { pages } = await buildTranscript(s.state, s.caseFile);
+    const pdf = await renderTranscriptPdf(pages, s.state, s.caseFile);
+    res.set('Content-Type', 'application/pdf');
+    res.set('Content-Disposition', `inline; filename="${s.caseFile.id}-transcript.pdf"`);
+    res.send(pdf);
+  } catch (err) {
+    console.error('[transcript.pdf]', err);
     res.status(500).json({ error: err.message });
   }
 });
