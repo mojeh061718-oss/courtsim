@@ -7,6 +7,7 @@ export default {
   id: 'oj-simpson',
   title: 'People of the State of California v. Orenthal James Simpson',
   jurisdiction: 'Los Angeles County Superior Court, California',
+  caseNumber: 'Case No. BA097211',
   status: 'Concluded in real life (simulation is outcome-blind)',
   blurb:
     'Nicole Brown Simpson and Ronald Goldman are found stabbed to death outside her Brentwood condominium. A trail of blood, hair, fiber, and a single leather glove leads to one of the most famous men in America — and to a defense that puts the LAPD itself on trial.',

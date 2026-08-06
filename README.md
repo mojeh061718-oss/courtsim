@@ -31,6 +31,16 @@ deliberating AI jury** that decides only on the record you build.
   rounds — speaking, disagreeing, voting — until they return a unanimous verdict or hang.
 - **Natural voice.** Every AI actor speaks via the browser's speech engine at courtroom
   pace, with distinct voices per role. Interrupt at any point with **Space** or **O**.
+- **Downloadable court transcript + juror sheet.** One tap (📄 in the header, or from the
+  verdict banner) produces a true-to-form transcript of proceedings: caption page with
+  docket number, appearances, 25-line numbered pages, `THE COURT:`/`ATTORNEY X:`
+  colloquy, `Q./A.` examinations with DIRECT/CROSS headings, stricken-material
+  parentheticals, the foreperson's return of verdict, per-count **verdict forms** with
+  signature blocks, and a reporter's certificate — followed by a **juror deliberation
+  sheet**: every juror's round-by-round statements and private ballots, per-round
+  tallies, ballot-evolution tracking per count, and an analyst's review of how the room
+  reasoned. Download as `.txt` or open the print view and save to PDF
+  (`GET /api/trial/:id/transcript.txt|.html`).
 - **Installable PWA, optimized for iPhone 16 Pro.** Standalone app manifest, service
   worker with app-shell caching, portrait courtroom layout with safe-area handling for
   the Dynamic Island and home indicator, a bottom-sheet "Court file" drawer (jury,

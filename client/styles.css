@@ -164,6 +164,8 @@ button, .btn, .tab, .docket-item, textarea, select { touch-action: manipulation;
   padding: 16px 22px; max-width: 720px; box-shadow: 0 8px 40px #000c;
 }
 .verdict-banner h3 { margin: 0 0 6px; color: var(--brass); }
+.verdict-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+.verdict-actions a.btn { text-decoration: none; display: inline-block; }
 
 /* ============================================================
    Mobile / PWA layout — tuned for iPhone 16 Pro (402×874 pt,

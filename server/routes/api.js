@@ -3,6 +3,7 @@ import { CASES, getCase, caseSummaries } from '../cases/index.js';
 import { createTrial, handleAction, publicState } from '../engine/trialEngine.js';
 import { OBJECTION_BASES } from '../engine/objections.js';
 import { researchCase } from '../research/publicData.js';
+import { buildTranscript } from '../engine/transcript.js';
 import { hasLiveModel, providerInfo } from '../llm/grokClient.js';
 
 const router = Router();
@@ -67,6 +68,33 @@ router.post('/trial/:id/action', async (req, res) => {
     res.status(500).json({ error: err.message });
   } finally {
     s.busy = false;
+  }
+});
+
+router.get('/trial/:id/transcript.txt', async (req, res) => {
+  const s = sessions.get(req.params.id);
+  if (!s) return res.status(404).json({ error: 'unknown trial' });
+  try {
+    const { text } = await buildTranscript(s.state, s.caseFile);
+    res.set('Content-Type', 'text/plain; charset=utf-8');
+    res.set('Content-Disposition', `attachment; filename="${s.caseFile.id}-transcript.txt"`);
+    res.send(text);
+  } catch (err) {
+    console.error('[transcript]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/trial/:id/transcript.html', async (req, res) => {
+  const s = sessions.get(req.params.id);
+  if (!s) return res.status(404).json({ error: 'unknown trial' });
+  try {
+    const { html } = await buildTranscript(s.state, s.caseFile);
+    res.set('Content-Type', 'text/html; charset=utf-8');
+    res.send(html);
+  } catch (err) {
+    console.error('[transcript]', err);
+    res.status(500).json({ error: err.message });
   }
 });
 

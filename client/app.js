@@ -390,9 +390,18 @@
       const line = v[ch.id] === 'hung' ? 'HUNG JURY — no unanimous verdict' : String(v[ch.id]).replace(/_/g, ' ').toUpperCase();
       banner.appendChild(el('div', null, `${ch.name}: ${line}`));
     }
+    const row = el('div', 'verdict-actions');
+    const view = el('button', 'btn primary small', '📄 Full transcript & juror sheet');
+    view.onclick = () => window.open(`/api/trial/${S.trialId}/transcript.html`, '_blank');
+    const dl = el('a', 'btn small', 'Download .txt');
+    dl.href = `/api/trial/${S.trialId}/transcript.txt`;
+    dl.setAttribute('download', '');
     const close = el('button', 'btn ghost small', 'Dismiss');
     close.onclick = () => banner.classList.add('hidden');
-    banner.appendChild(close);
+    row.appendChild(view);
+    row.appendChild(dl);
+    row.appendChild(close);
+    banner.appendChild(row);
     banner.classList.remove('hidden');
   }
 
@@ -528,6 +537,10 @@
     }
     if (e.key === 'Escape') $('#objection-modal').classList.add('hidden');
   });
+
+  $('#btn-transcript').onclick = () => {
+    if (S.trialId) window.open(`/api/trial/${S.trialId}/transcript.html`, '_blank');
+  };
 
   $('#btn-mute').onclick = () => {
     CourtSpeech.setMuted(!CourtSpeech.muted);

@@ -131,6 +131,23 @@ async function main() {
     if (r.state.phase !== 'verdict') throw new Error('no verdict, phase ' + r.state.phase);
     console.log('\n== VERDICT:', JSON.stringify(r.state.deliberation.verdict));
     console.log('== score:', JSON.stringify(r.state.score));
+
+    // Transcript endpoints: full court transcript + verdict forms + juror sheet.
+    const txtRes = await fetch(`${BASE}/trial/${id}/transcript.txt`);
+    if (!txtRes.ok) throw new Error('transcript.txt -> ' + txtRes.status);
+    const txt = await txtRes.text();
+    for (const marker of ['TRANSCRIPT OF PROCEEDINGS', 'APPEARANCES', 'PROCEEDINGS', 'DIRECT EXAMINATION', 'CROSS-EXAMINATION', 'VERDICT FORM', "REPORTER'S CERTIFICATE", 'JUROR DELIBERATION SHEET', 'BALLOT EVOLUTION']) {
+      if (!txt.includes(marker)) throw new Error('transcript missing section: ' + marker);
+    }
+    const htmlRes = await fetch(`${BASE}/trial/${id}/transcript.html`);
+    if (!htmlRes.ok || !(await htmlRes.text()).includes('class="page"')) throw new Error('transcript.html failed');
+    const pages = (txt.match(/\f/g) || []).length + 1;
+    console.log(`== transcript OK: ${txt.length} chars across ${pages} pages, all sections present`);
+    if (process.env.SMOKE_SAVE_TRANSCRIPT) {
+      const { writeFileSync } = await import('node:fs');
+      writeFileSync(process.env.SMOKE_SAVE_TRANSCRIPT, txt);
+      console.log('== transcript saved to', process.env.SMOKE_SAVE_TRANSCRIPT);
+    }
     console.log('\nSMOKE TEST PASSED');
   } finally {
     server.kill();

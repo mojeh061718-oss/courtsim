@@ -12,6 +12,7 @@ export default {
   id: 'clancy',
   title: 'Commonwealth of Massachusetts v. Lindsay Clancy',
   jurisdiction: 'Plymouth County Superior Court, Massachusetts',
+  caseNumber: 'Docket No. 2383CR00100 (simulated docket)',
   status: 'Ongoing in real life — simulation uses public pretrial record',
   blurb:
     'A labor-and-delivery nurse is charged with murdering her three young children while her husband ran a brief errand. The Commonwealth alleges planning; the defense answers with postpartum psychosis and a catastrophic medication spiral.',

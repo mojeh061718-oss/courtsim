@@ -47,12 +47,15 @@ export async function runDeliberationRound(state, caseFile, jurorFacingRecord) {
       }
     );
     const entry = normalizeJurorTurn(out, juror, caseFile, delib, jurorFacingRecord);
+    entry.round = roundNo;
     delib.log.push(entry);
     delib.votes[juror.seat] = entry.votes;
     messages.push(entry);
   }
 
   const { tally, unanimous, verdict } = tallyVotes(state, caseFile);
+  delib.roundTallies = delib.roundTallies || [];
+  delib.roundTallies.push({ round: roundNo, tally });
   if (unanimous) {
     delib.verdict = verdict;
   } else if (delib.round >= CONFIG.maxDelibRounds) {
@@ -95,6 +98,34 @@ export function tallyVotes(state, caseFile) {
     }
   }
   return { tally, unanimous: unanimousAll, verdict };
+}
+
+/**
+ * Post-verdict deliberation analysis for the juror sheet: a neutral analyst's
+ * review of how the room actually reasoned — evidence that drove votes,
+ * holdouts, pivots, and what unanimity (or a hang) turned on.
+ */
+export async function deliberationAnalysis(state, caseFile) {
+  const delib = state.deliberation;
+  if (delib.analysis) return delib.analysis;
+  const roster = state.jury.map((j) => `Juror ${j.seat}: ${j.name}, ${j.occupation}`).join('\n');
+  const talk = delib.log.map((m) => `[Round ${m.round}] Juror ${m.seat} (${m.name}): ${m.statement} — votes: ${JSON.stringify(m.votes)}`).join('\n');
+  const tallies = (delib.roundTallies || []).map((r) => `Round ${r.round}: ${JSON.stringify(r.tally)}`).join('\n');
+  const analysis = await chat(
+    [
+      { role: 'system', content: 'You are a neutral jury consultant writing a post-trial deliberation review for attorney training. Analytical, specific, no fluff. Never speculate about the real-world case behind the simulation — analyze only this deliberation record.' },
+      { role: 'user', content: `PANEL:\n${roster}\n\nCHARGES: ${caseFile.charges.map((c) => c.name).join(' | ')}\n\nDELIBERATION RECORD:\n${talk}\n\nROUND TALLIES:\n${tallies}\n\nFINAL VERDICT: ${JSON.stringify(delib.verdict)}${delib.hung ? ' (hung on some counts)' : ''}\n\nWrite a 250-400 word deliberation review: (1) how the initial split formed and around which evidence; (2) which jurors anchored each camp and why, tied to their backgrounds; (3) the pivotal exchanges or evidence that moved votes between rounds; (4) what the final verdict turned on, per count; (5) one paragraph of takeaways for the attorneys about which arguments landed and which fell flat.` },
+    ],
+    {
+      temperature: 0.5,
+      mock: () => {
+        const v = delib.verdict ? Object.entries(delib.verdict).map(([k, x]) => `${k}: ${String(x).replace(/_/g, ' ')}`).join('; ') : 'none recorded';
+        return `Deliberation review (offline mode). The panel of ${state.jury.length} deliberated ${delib.round} round(s). Early votes clustered around the physical evidence most cited aloud; jurors with technical backgrounds anchored the discussion and others converged as rounds progressed. Final outcome — ${v}. For the attorneys: the exhibits jurors quoted by name in the room were the ones that decided the case; testimony nobody repeated back had little effect.`;
+      },
+    }
+  );
+  delib.analysis = analysis;
+  return analysis;
 }
 
 /* ---------- offline mock juror ---------- */

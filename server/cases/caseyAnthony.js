@@ -6,6 +6,7 @@ export default {
   id: 'casey-anthony',
   title: 'State of Florida v. Casey Marie Anthony',
   jurisdiction: 'Ninth Judicial Circuit, Orange County, Florida',
+  caseNumber: 'Case No. 48-2008-CF-015606-O',
   status: 'Concluded in real life (simulation is outcome-blind)',
   blurb:
     'Two-year-old Caylee Anthony is not reported missing for 31 days; her remains are found in woods near the family home. The State alleges chloroform and duct tape; the defense alleges an accidental drowning and a family cover-up.',

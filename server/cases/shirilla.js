@@ -11,6 +11,7 @@ export default {
   id: 'shirilla',
   title: 'State of Ohio v. Mackenzie Shirilla',
   jurisdiction: 'Cuyahoga County Court of Common Pleas, Ohio',
+  caseNumber: 'Case No. CR-22-673591 (simulated docket)',
   status: 'Concluded in real life (simulation is outcome-blind)',
   blurb:
     'A 17-year-old drives her Toyota Camry into a brick wall at roughly 100 mph at dawn, killing her boyfriend and his friend. Intentional act of murder, or a catastrophic loss of control?',
