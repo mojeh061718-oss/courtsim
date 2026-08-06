@@ -165,7 +165,7 @@ async function judgeMotionRuling(state, caseFile, { movant, text, response }) {
     {
       json: true,
       temperature: 0.4,
-      effort: 'low',
+      effort: 'low', hedgeDelayMs: 3500,
       provider: 'xai',
       mock: () => {
         const grant = hash01(text) > 0.5;
@@ -203,7 +203,10 @@ async function userStatement(state, caseFile, events, text) {
     return;
   }
   if (!text?.trim()) return;
-  // 1. Opposing counsel may object BEFORE the jury hears it.
+  // 1. Opposing counsel may object BEFORE the jury hears it. The judge's
+  // screen runs in parallel with the review to halve the wait.
+  const screenP = judgeScreen(state, caseFile, text);
+  screenP.catch(() => {});
   const review = await counselReview(state, caseFile, text, `${state.phase === 'openings' ? 'opening statement' : 'closing argument'}`);
   if (review?.object) {
     const basis = basisById(review.basis);
@@ -212,12 +215,12 @@ async function userStatement(state, caseFile, events, text) {
     state.pending = { type: 'objection_response', submission: { kind: 'statement', text }, review };
     return;
   }
-  await admitUserSubmission(state, caseFile, events, { kind: 'statement', text });
+  await admitUserSubmission(state, caseFile, events, { kind: 'statement', text }, { screenP });
 }
 
-async function admitUserSubmission(state, caseFile, events, submission) {
+async function admitUserSubmission(state, caseFile, events, submission, pre = {}) {
   // 2. Judicial screening — sua sponte control even with no objection.
-  const screen = await judgeScreen(state, caseFile, submission.text);
+  const screen = await (pre.screenP || judgeScreen(state, caseFile, submission.text));
   if (screen?.intervene) {
     push(events, state, judgeEv(caseFile, screen.statement || 'Counsel, approach. That will not continue in my courtroom.', { kind: 'admonishment' }));
     state.score.admonishments += 1;
@@ -232,7 +235,7 @@ async function admitUserSubmission(state, caseFile, events, submission) {
     advanceAfterStatement(state, caseFile, events);
   } else if (submission.kind === 'question') {
     push(events, state, userEv(state, caseFile, submission.text, 'question'));
-    await witnessAnswers(state, caseFile, events, submission.text);
+    await witnessAnswers(state, caseFile, events, submission.text, pre.answerP);
   }
 }
 
@@ -295,6 +298,13 @@ async function userAsks(state, caseFile, events, text) {
   if (!state.exam) { push(events, state, sys('system', 'No witness is on the stand.', { speak: false })); return; }
   if (!examinerIsUser(state)) { push(events, state, sys('system', 'You are not the examining attorney right now.', { speak: false })); return; }
   if (!text?.trim()) return;
+  // Latency: run the objection review, the judge's screen, and the witness's
+  // draft answer IN PARALLEL. The answer is speculative — if an objection or
+  // judicial block lands, it is discarded unheard, so record discipline holds.
+  const answerP = fetchWitnessAnswer(state, caseFile, text);
+  answerP.catch(() => {});
+  const screenP = judgeScreen(state, caseFile, text);
+  screenP.catch(() => {});
   const review = await counselReview(state, caseFile, text, `question on ${state.exam.stage} examination of ${witnessOf(state, caseFile).name}`);
   if (review?.object) {
     const basis = basisById(review.basis);
@@ -303,13 +313,13 @@ async function userAsks(state, caseFile, events, text) {
     state.pending = { type: 'objection_response', submission: { kind: 'question', text }, review };
     return;
   }
-  await admitUserSubmission(state, caseFile, events, { kind: 'question', text });
+  await admitUserSubmission(state, caseFile, events, { kind: 'question', text }, { screenP, answerP });
 }
 
-async function witnessAnswers(state, caseFile, events, question) {
+function fetchWitnessAnswer(state, caseFile, question) {
   const w = witnessOf(state, caseFile);
   const examTranscript = examinationText(state, caseFile);
-  const answer = await chat(
+  return chat(
     [
       { role: 'system', content: witnessSystem({ caseFile, witness: w }) },
       { role: 'user', content: `You are on the stand under ${state.exam.stage} examination.\nTESTIMONY SO FAR THIS EXAMINATION:\n${examTranscript || '(none yet)'}\n\nCOUNSEL ASKS: "${question}"\n\nAnswer as ${w.name} would, per your rules.` },
@@ -317,6 +327,7 @@ async function witnessAnswers(state, caseFile, events, question) {
     {
       temperature: 0.7,
       effort: 'none',
+      hedgeDelayMs: 3500,
       mock: () => {
         const s = sentences(w.knowledge);
         const i = Math.floor(hash01(question + w.id) * s.length);
@@ -324,6 +335,10 @@ async function witnessAnswers(state, caseFile, events, question) {
       },
     }
   );
+}
+
+async function witnessAnswers(state, caseFile, events, question, preAnswer) {
+  const answer = await (preAnswer || fetchWitnessAnswer(state, caseFile, question));
   push(events, state, witnessEv(state, caseFile, answer));
   state.exam.qCount += 1;
 }
@@ -504,7 +519,7 @@ async function aiNextQuestion(state, caseFile, w) {
     {
       json: true,
       temperature: 0.7,
-      effort: 'none',
+      effort: 'none', hedgeDelayMs: 3500,
       mock: () => {
         const n = state.exam.qCount;
         if (n >= 3) return { pass: true };
@@ -527,7 +542,7 @@ async function aiStatement(state, caseFile, kindLabel) {
     ],
     {
       temperature: 0.75,
-      effort: 'low',
+      effort: 'low', hedgeDelayMs: 3500,
       provider: 'xai',
       mock: () => {
         const theory = caseFile.theories[state.aiSide];
@@ -607,7 +622,7 @@ async function judgeObjectionRuling(state, caseFile, { objector, basis, argument
     {
       json: true,
       temperature: 0.3,
-      effort: 'low',
+      effort: 'low', hedgeDelayMs: 3500,
       provider: 'xai',
       mock: () => fallbackRuling(targetText + basis.label),
     }
@@ -653,7 +668,7 @@ async function counselReview(state, caseFile, text, contextLabel) {
     {
       json: true,
       temperature: 0.4,
-      effort: 'none',
+      effort: 'none', hedgeDelayMs: 3500,
       mock: () => {
         const t = text.toLowerCase();
         if (/(didn't you|isn't it true|wouldn't you agree)/.test(t) && state.exam?.stage === 'direct' && examinerIsUser(state))
@@ -681,7 +696,7 @@ async function judgeScreen(state, caseFile, text) {
     {
       json: true,
       temperature: 0.2,
-      effort: 'none',
+      effort: 'none', hedgeDelayMs: 3500,
       mock: () => {
         // Offline heuristic: flag only when the submission shares 2+ distinctive
         // content words with an exclusion (common legal vocabulary ignored).
@@ -705,7 +720,7 @@ async function counselFreeText(state, caseFile, side, task, mock) {
       { role: 'system', content: counselSystem({ caseFile, side, phaseLabel: state.phase, difficulty: diff(state).counsel }) },
       { role: 'user', content: `RECORD (recent):\n${transcriptText(state)}\n\n${task}` },
     ],
-    { temperature: 0.6, effort: 'none', mock }
+    { temperature: 0.6, effort: 'none', hedgeDelayMs: 3500, mock }
   );
 }
 
