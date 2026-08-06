@@ -26,13 +26,17 @@ const PROVIDER = (
 ).toLowerCase();
 const PRESET = PRESETS[PROVIDER] || PRESETS.xai;
 
-// Each provider prefers its own key, so both may be configured at once
-// (e.g. Bedrock for the courtroom, native SpaceXAI kept for Live Search).
-// AWS_BEARER_TOKEN_BEDROCK is the conventional env name for Bedrock API keys.
+// Each provider prefers its own key, so both may be configured at once —
+// the recommended setup: Bedrock runs the courtroom, the native SpaceXAI key
+// powers Agent Tools web research. AWS_BEARER_TOKEN_BEDROCK is the
+// conventional env name for Bedrock API keys.
 const KEYS = {
   xai: process.env.GROK_API_KEY || process.env.AWS_BEARER_TOKEN_BEDROCK || '',
   bedrock: process.env.AWS_BEARER_TOKEN_BEDROCK || process.env.GROK_API_KEY || '',
 };
+// Web research authenticates against api.x.ai and therefore needs a real
+// native key — the Bedrock token cannot be used there.
+const NATIVE_KEY = process.env.GROK_API_KEY || '';
 
 const DEFAULTS = {
   baseUrl: process.env.GROK_BASE_URL || PRESET.baseUrl,
@@ -51,7 +55,7 @@ export function providerInfo() {
     model: DEFAULTS.model,
     baseUrl: DEFAULTS.baseUrl,
     live: hasLiveModel(),
-    liveSearch: PROVIDER === 'xai' && hasLiveModel(),
+    liveSearch: Boolean(NATIVE_KEY),
   };
 }
 
@@ -115,9 +119,11 @@ export async function chat(messages, opts = {}) {
  * servers and returns a cited answer.
  */
 export async function researchWithWebSearch({ instructions, input, mock }) {
-  if (PROVIDER !== 'xai' || !KEYS.xai) return mock ? mock() : null;
+  if (!NATIVE_KEY) return mock ? mock() : null;
   const body = {
-    model: process.env.RESEARCH_MODEL || DEFAULTS.model,
+    // Research always hits api.x.ai, so it always uses the NATIVE model id —
+    // never the Bedrock id, even when the courtroom provider is bedrock.
+    model: process.env.RESEARCH_MODEL || PRESETS.xai.model,
     instructions,
     input,
     tools: [{ type: 'web_search' }],
@@ -130,7 +136,7 @@ export async function researchWithWebSearch({ instructions, input, mock }) {
       const timer = setTimeout(() => ctrl.abort(), 180000);
       const res = await fetch('https://api.x.ai/v1/responses', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${KEYS.xai}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${NATIVE_KEY}` },
         body: JSON.stringify(body),
         signal: ctrl.signal,
       });

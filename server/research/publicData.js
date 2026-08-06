@@ -42,7 +42,7 @@ export async function researchCase(caseFile) {
     liveSearch: info.liveSearch,
     provider: info.provider,
     note: info.live && !info.liveSearch
-      ? 'Running on Amazon Bedrock: web search is a native-SpaceXAI Agent Tools feature, so this report reflects model knowledge rather than a live web sweep. Point LLM_PROVIDER=xai at console.x.ai for live-sourced research.'
+      ? 'No native SpaceXAI key configured: web search is a native Agent Tools feature, so this report reflects model knowledge rather than a live web sweep. Add a GROK_API_KEY (console.x.ai) alongside the Bedrock key to enable live-sourced research.'
       : undefined,
     caseId: caseFile.id,
     report,
