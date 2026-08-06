@@ -191,6 +191,13 @@ router.post('/trial/:id/strategy', async (req, res) => {
   }
 });
 
+// Close a trial for good — memory and disk, as if never started.
+router.delete('/trial/:id', (req, res) => {
+  sessions.delete(req.params.id);
+  deleteTrial(req.params.id);
+  res.json({ ok: true });
+});
+
 router.get('/trial/:id', (req, res) => {
   const s = getSession(req.params.id);
   if (!s) return res.status(404).json({ error: 'unknown trial' });

@@ -87,20 +87,33 @@
     } catch { /* storage full/blocked — resume just won't be available */ }
   }
 
+  function readActive() {
+    try { return JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null'); } catch { return null; }
+  }
+
   async function tryResume() {
-    let ptr = null;
-    try { ptr = JSON.parse(localStorage.getItem(ACTIVE_KEY) || 'null'); } catch { ptr = null; }
+    const ptr = readActive();
     if (!ptr || !ptr.trialId) return;
+    // A deliberate Exit pauses the trial: land on the home screen with a
+    // resume card, not back in the courtroom. Only an app killed mid-trial
+    // auto-resumes straight to the exact point.
+    if (ptr.paused) return renderResumeCard(ptr);
+    await restoreTrial(ptr);
+  }
+
+  async function restoreTrial(ptr) {
     let r;
     try {
       r = await api('/trial/' + ptr.trialId, { timeoutMs: 20000 });
     } catch {
       localStorage.removeItem(ACTIVE_KEY); // trial no longer on the server
+      $('#resume-card').classList.add('hidden');
       return;
     }
     if (!r || !r.state || r.state.phase === 'verdict') return localStorage.removeItem(ACTIVE_KEY);
     try {
       S.selectedCase = await api('/cases/' + ptr.caseId);
+      S.gen = (S.gen || 0) + 1;
       S.trialId = ptr.trialId;
       S.state = r.state;
       S.pretrialDone = r.state.phase !== 'pretrial';
@@ -120,8 +133,12 @@
         renderEvent(ev);
         if (ev.speak && ['ai_counsel', 'witness'].includes(ev.actor)) S.lastSpokenTarget = { eventId: ev.id };
       }
+      S.objectionHold = false;
+      S.queuedObjection = null;
       renderControls();
       maybeAutoAdvance();
+      $('#resume-card').classList.add('hidden');
+      try { localStorage.setItem(ACTIVE_KEY, JSON.stringify({ ...ptr, paused: false, ts: Date.now() })); } catch { /* fine */ }
     } catch (err) {
       // Never leave a half-restored courtroom: back to a clean case list.
       localStorage.removeItem(ACTIVE_KEY);
@@ -132,6 +149,55 @@
       console.warn('resume failed', err);
     }
   }
+
+  /* ============ pause / exit ============ */
+  // The trial is turn-based and the server checkpoints every action, so
+  // "pause" simply means: stop the room, keep the save, go home.
+
+  function renderResumeCard(ptr) {
+    const card = $('#resume-card');
+    card.innerHTML = '';
+    card.appendChild(el('div', 'rc-title', `⏸ Trial in progress — ${ptr.title || 'your case'}`));
+    card.appendChild(el('div', 'rc-sub', 'Paused exactly where you left it. The full record is saved.'));
+    const row = el('div', 'rc-actions');
+    const resume = el('button', 'btn primary', 'Resume the trial');
+    resume.onclick = () => restoreTrial(ptr);
+    const discard = el('button', 'btn ghost', 'Close it for good');
+    discard.onclick = async () => {
+      if (!confirm('Close this trial permanently? The record will be deleted as if it never happened.')) return;
+      try { await api('/trial/' + ptr.trialId, { method: 'DELETE', timeoutMs: 15000 }); } catch { /* server may already have purged it */ }
+      localStorage.removeItem(ACTIVE_KEY);
+      card.classList.add('hidden');
+    };
+    row.appendChild(resume);
+    row.appendChild(discard);
+    card.appendChild(row);
+    card.classList.remove('hidden');
+  }
+
+  function exitTrial() {
+    if (!S.trialId) return;
+    const finished = S.state?.phase === 'verdict';
+    CourtSpeech.interrupt();
+    clearTimeout(S._autoTimer);
+    S.gen = (S.gen || 0) + 1; // discard any in-flight responses
+    S.objectionHold = false;
+    S.queuedObjection = null;
+    const ptr = { trialId: S.trialId, caseId: S.selectedCase.id, title: S.selectedCase.title, ts: Date.now(), paused: true };
+    S.trialId = null;
+    S.state = null;
+    $('#screen-court').classList.add('hidden');
+    $('#verdict-banner').classList.add('hidden');
+    $('#screen-select').classList.remove('hidden');
+    if (finished) {
+      localStorage.removeItem(ACTIVE_KEY);
+    } else {
+      try { localStorage.setItem(ACTIVE_KEY, JSON.stringify(ptr)); } catch { /* fine */ }
+      renderResumeCard(ptr);
+    }
+  }
+
+  $('#btn-exit').onclick = exitTrial;
 
   /* ================= case selection ================= */
 
