@@ -40,7 +40,9 @@ export async function generateCase({ theme, difficulty }) {
       { role: 'system', content: GENERATOR_SYSTEM },
       { role: 'user', content: generatorPrompt(theme, level) },
     ],
-    { json: true, temperature: 0.9, mock: () => mockCase(theme, level) }
+    // effort 'none': case authoring is creative output — reasoning roughly
+    // doubled generation latency on Bedrock without quality gain.
+    { json: true, temperature: 0.9, effort: 'none', mock: () => mockCase(theme, level) }
   );
   const caseFile = normalize(raw, theme, level);
   if (registry.size >= MAX_GENERATED) {

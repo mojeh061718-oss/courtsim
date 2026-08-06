@@ -79,6 +79,10 @@ export async function chat(messages, opts = {}) {
     temperature,
   };
   if (json) body.response_format = { type: 'json_object' };
+  // Grok 4.3's always-on reasoning can be dialed down per call (opts.effort:
+  // 'none'|'low'|'medium'|'high') — big latency win for creative/mechanical
+  // calls. Verified on bedrock-mantle; guarded there to avoid rejects elsewhere.
+  if (opts.effort && PROVIDER === 'bedrock') body.reasoning_effort = opts.effort;
 
   let lastErr;
   for (let attempt = 0; attempt < 3; attempt++) {
