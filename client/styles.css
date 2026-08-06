@@ -216,6 +216,8 @@ input[type="range"] { accent-color: var(--brass); width: 100%; }
 .settings-card { border-color: var(--brass); max-height: 86dvh; overflow-y: auto; }
 .settings-card h3 { color: var(--brass); }
 .settings-card select { margin-bottom: 2px; }
+.toggle-row { display: flex; gap: 8px; align-items: flex-start; line-height: 1.4; margin: 12px 0 4px; }
+.toggle-row input { margin-top: 3px; accent-color: var(--brass); }
 .settings-card input[type="range"] { margin: 6px 0 10px; }
 .modal-sub { color: var(--ink-dim); font-size: 0.82rem; }
 .modal-card label { display: block; margin: 10px 0 4px; font-size: 0.85rem; color: var(--ink-dim); }

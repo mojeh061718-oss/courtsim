@@ -6,6 +6,7 @@ import { researchCase } from '../research/publicData.js';
 import { buildTranscript } from '../engine/transcript.js';
 import { generateCase } from '../generator/caseGenerator.js';
 import { synthesize } from '../tts/polly.js';
+import { chat } from '../llm/grokClient.js';
 import { hasLiveModel, providerInfo } from '../llm/grokClient.js';
 
 const router = Router();
@@ -72,6 +73,33 @@ router.post('/trial', (req, res) => {
   const { state, events } = createTrial(caseFile, side, difficulty);
   sessions.set(state.id, { state, caseFile });
   res.json({ trialId: state.id, events, state: publicState(state, caseFile) });
+});
+
+// Dictation repair: fix speech-to-text errors in a courtroom utterance using
+// the case's own vocabulary. Meaning and substance are never altered.
+router.post('/cleanup', async (req, res) => {
+  const { text, caseId } = req.body || {};
+  const raw = String(text || '').trim();
+  if (!raw) return res.status(400).json({ error: 'no text' });
+  const c = getCase(caseId);
+  const vocab = c
+    ? [c.parties.defendant, ...c.parties.victims, c.parties.judge, c.parties.prosecutor, c.parties.defenseCounsel,
+       ...c.witnesses.map((w) => w.name)].join('; ')
+    : '';
+  try {
+    const cleaned = await chat(
+      [
+        { role: 'system', content: `You repair speech-to-text transcription errors in courtroom utterances spoken by an attorney. Fix ONLY transcription artifacts: homophones ("You're honor" -> "Your Honor"), broken words ("Mis characterizing" -> "mischaracterizing"), wrong articles, missing punctuation, and garbled legal terms (in limine, voir dire, sua sponte, prima facie, Rule 403/404(b)/611/702, foundation, hearsay). Use these case names when the audio clearly meant them: ${vocab}. NEVER change the meaning, add arguments, remove content, or polish style beyond transcription repair. Return ONLY the corrected text, nothing else.` },
+        { role: 'user', content: raw },
+      ],
+      { temperature: 0.1, effort: 'none', timeoutMs: 15000, mock: () => raw }
+    );
+    const out = typeof cleaned === 'string' && cleaned.trim() ? cleaned.trim() : raw;
+    // Guardrail: if the model rewrote rather than repaired, keep the original.
+    res.json({ text: out.length > raw.length * 2 || out.length < raw.length * 0.4 ? raw : out });
+  } catch {
+    res.json({ text: raw });
+  }
 });
 
 router.post('/tts', async (req, res) => {
