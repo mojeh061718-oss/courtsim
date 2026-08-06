@@ -649,6 +649,21 @@ function applyObjectionRuling(state, caseFile, events, { ruling, target, paragra
       state.exam.pendingQuestion = null; // question withdrawn before any answer
     }
     push(events, state, judgeEv(caseFile, `Sustained. ${r.reasoning || ''}${r.instruct_disregard ? ' The jury will disregard the last remarks entirely; they are stricken and are not evidence.' : ''}${r.admonishment ? ' ' + r.admonishment : ''}`, { kind: 'ruling', strikeTargetId: target.id, strikeParagraph: paragraphIndex }));
+    // Hard-interrupt semantics: if the objection was to a question and an
+    // answer already slipped onto the record before the ruling (the user
+    // objected mid-flight), the answer falls with the question.
+    if (target.kind === 'question') {
+      const idx = state.record.indexOf(target);
+      for (let i = idx + 1; i >= 0 && i < state.record.length; i++) {
+        const e = state.record[i];
+        if (e.kind === 'question') break; // a later question starts a new chain
+        if (e.actor === 'witness' && e.kind === 'answer' && !e.stricken) {
+          e.stricken = true;
+          push(events, state, sys('system', 'The answer given to the stricken question is likewise stricken.', { speak: false, strikeTargetId: e.id }));
+          break;
+        }
+      }
+    }
     if (r.admonishment) state.score.admonishments += 1;
   } else {
     state.score.userObjections.overruled += 1;
