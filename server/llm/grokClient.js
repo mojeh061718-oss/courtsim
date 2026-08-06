@@ -26,11 +26,18 @@ const PROVIDER = (
 ).toLowerCase();
 const PRESET = PRESETS[PROVIDER] || PRESETS.xai;
 
+// Each provider prefers its own key, so both may be configured at once
+// (e.g. Bedrock for the courtroom, native SpaceXAI kept for Live Search).
+// AWS_BEARER_TOKEN_BEDROCK is the conventional env name for Bedrock API keys.
+const KEYS = {
+  xai: process.env.GROK_API_KEY || process.env.AWS_BEARER_TOKEN_BEDROCK || '',
+  bedrock: process.env.AWS_BEARER_TOKEN_BEDROCK || process.env.GROK_API_KEY || '',
+};
+
 const DEFAULTS = {
   baseUrl: process.env.GROK_BASE_URL || PRESET.baseUrl,
   model: process.env.GROK_MODEL || PRESET.model,
-  // AWS_BEARER_TOKEN_BEDROCK is the conventional env name for Bedrock API keys.
-  apiKey: process.env.GROK_API_KEY || process.env.AWS_BEARER_TOKEN_BEDROCK || '',
+  apiKey: KEYS[PROVIDER] || KEYS.xai,
   timeoutMs: Number(process.env.GROK_TIMEOUT_MS || 90000),
 };
 
@@ -54,13 +61,12 @@ export function providerInfo() {
  *  opts:
  *    json      – ask for / parse a JSON object response
  *    temperature
- *    search    – enable xAI Live Search (used by the public-data research module)
  *    mock(ctx) – REQUIRED fallback used when no API key is configured or the
  *                call fails; must return the same shape the caller expects
  *                (string, or object when opts.json).
  */
 export async function chat(messages, opts = {}) {
-  const { json = false, temperature = 0.7, search = false, mock } = opts;
+  const { json = false, temperature = 0.7, mock } = opts;
   if (!DEFAULTS.apiKey) return mock ? mock() : null;
 
   const body = {
@@ -69,9 +75,6 @@ export async function chat(messages, opts = {}) {
     temperature,
   };
   if (json) body.response_format = { type: 'json_object' };
-  // search_parameters (Live Search) is a native-xAI extension; Bedrock's
-  // bedrock-mantle endpoint would reject the unknown field.
-  if (search && PROVIDER === 'xai') body.search_parameters = { mode: 'auto', return_citations: true };
 
   let lastErr;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -103,6 +106,60 @@ export async function chat(messages, opts = {}) {
   }
   console.error('[grok] falling back to offline mode:', lastErr?.message);
   return mock ? mock() : null;
+}
+
+/**
+ * Web research via the SpaceXAI Agent Tools API (Responses endpoint with a
+ * server-side web_search tool). Native provider only — Bedrock's mantle
+ * endpoint does not expose agent tools. The model runs searches on xAI's
+ * servers and returns a cited answer.
+ */
+export async function researchWithWebSearch({ instructions, input, mock }) {
+  if (PROVIDER !== 'xai' || !KEYS.xai) return mock ? mock() : null;
+  const body = {
+    model: process.env.RESEARCH_MODEL || DEFAULTS.model,
+    instructions,
+    input,
+    tools: [{ type: 'web_search' }],
+    stream: false,
+  };
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 180000);
+      const res = await fetch('https://api.x.ai/v1/responses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${KEYS.xai}` },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      if (!res.ok) throw new Error(`xAI Responses API ${res.status}: ${(await res.text().catch(() => '')).slice(0, 300)}`);
+      const data = await res.json();
+      const text = extractResponsesText(data);
+      if (text) return text;
+      throw new Error('empty Responses API output');
+    } catch (err) {
+      lastErr = err;
+      await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));
+    }
+  }
+  console.error('[grok] web research failed:', lastErr?.message);
+  return mock ? mock() : null;
+}
+
+/** Pull the final text out of a Responses API payload (shape-tolerant). */
+function extractResponsesText(data) {
+  if (typeof data.output_text === 'string' && data.output_text.trim()) return data.output_text;
+  const parts = [];
+  for (const item of data.output || []) {
+    if (item.type !== 'message') continue;
+    for (const c of item.content || []) {
+      if (typeof c.text === 'string') parts.push(c.text);
+    }
+  }
+  return parts.join('\n').trim();
 }
 
 /** Tolerant JSON extraction — models occasionally wrap JSON in prose/fences. */

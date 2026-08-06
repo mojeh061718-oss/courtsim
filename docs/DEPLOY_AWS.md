@@ -15,11 +15,11 @@ one env var (`LLM_PROVIDER`):
 | Key | Bedrock API key (Bedrock console → API keys), env `AWS_BEARER_TOKEN_BEDROCK` | key from console.x.ai, env `GROK_API_KEY` |
 | Regions | us-east-1, us-east-2, us-west-2 (+ GovCloud US-West) | n/a (SpaceXAI-hosted) |
 | Billing | your AWS bill, IAM-governed | separate SpaceXAI account |
-| Live Search (research endpoint) | not available | supported |
+| Web-search research (Agent Tools) | not available | supported |
 
 **Recommendation when deploying on AWS:** use Bedrock (`LLM_PROVIDER=bedrock`,
 `AWS_REGION=us-east-1`) — same-cloud latency, one bill, keys managed in AWS. Keep a
-native SpaceXAI key configured only if you want the Live Search case-refresh feature
+native SpaceXAI key configured only if you want the web-search case-refresh feature
 (`POST /api/research/:caseId`); everything else is identical.
 
 ## Option A — AWS App Runner (recommended: simplest)

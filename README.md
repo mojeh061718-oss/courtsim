@@ -55,7 +55,7 @@ Grok 4.3 is reachable through either of two OpenAI-compatible endpoints — pick
   `bedrock-mantle` endpoint (`us-east-1` / `us-east-2` / `us-west-2`), authenticated
   with a Bedrock API key (`AWS_BEARER_TOKEN_BEDROCK`). Recommended when hosting on AWS.
 - **`xai`** — native SpaceXAI API: model `grok-4.3` at `api.x.ai`, key from
-  console.x.ai (`GROK_API_KEY`). Required only for Live Search case research.
+  console.x.ai (`GROK_API_KEY`). Required only for web-search case research (Agent Tools).
 
 No API key? It runs in **offline demo mode** — deterministic mock agents so the whole
 flow (motions, objections, examinations, deliberation, verdict) is playable for free.
@@ -70,7 +70,7 @@ npm run smoke              # scripted end-to-end trial against the API
 server/
   index.js               Express entry — API + static client
   llm/grokClient.js      xAI Grok client (OpenAI-compatible), retries, JSON mode,
-                         Live Search support, per-call offline fallbacks
+                         Agent Tools web search, per-call offline fallbacks
   agents/prompts.js      How Grok is instructed to argue, judge, testify, deliberate
   engine/trialEngine.js  Trial state machine (pretrial → … → verdict)
   engine/objections.js   FRE-style objection catalog (shared by user, AI, judge)
@@ -87,7 +87,7 @@ client/                  Vanilla SPA — courtroom UI, objection hotkey, speech 
 | `GET /api/cases`, `GET /api/cases/:id` | case catalog and detail |
 | `POST /api/trial` `{caseId, side}` | start a trial |
 | `POST /api/trial/:id/action` | everything in-trial: `proceed`, `file_motion`, `respond`, `statement`, `call_witness`, `ask`, `objection`, `pass_witness`, `rest_case`, `deliberate_round` |
-| `POST /api/research/:caseId` | Grok Live Search fact-check/refresh of a case file |
+| `POST /api/research/:caseId` | live web-search fact-check/refresh of a case file (Agent Tools) |
 
 ### How jury blindness works
 

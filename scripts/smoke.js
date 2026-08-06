@@ -24,7 +24,7 @@ function show(events) {
 
 async function main() {
   const server = spawn(process.execPath, ['server/index.js'], {
-    env: { ...process.env, PORT: String(PORT), GROK_API_KEY: process.env.GROK_API_KEY || '' },
+    env: { ...process.env, PORT: String(PORT) },
     stdio: 'inherit',
   });
   await new Promise((r) => setTimeout(r, 900));
@@ -63,9 +63,13 @@ async function main() {
     // user objects to the AI opening, paragraph 0
     const aiOpening = r.events.find((e) => e.actor === 'ai_counsel' && e.kind === 'statement');
     r = await act({ type: 'objection', basis: 'improper_argument', argument: 'Counsel is arguing inferences in opening.', targetEventId: aiOpening?.id, paragraphIndex: 0 });
-    r = await act({ type: 'statement', text: 'Members of the jury, the evidence will show a catastrophic accident, not a murder. You will hear that Mackenzie was a 17-year-old girl who nearly died in that car herself, and that the State cannot exclude a tragic loss of control.' });
-    if (r.state.pending?.type === 'objection_response') {
-      r = await act({ type: 'respond', text: 'Your Honor, this is a proper preview of the evidence, not argument.' });
+    // Live models may sustain objections against our statement — rephrase and retry like a real attorney.
+    let tries = 0;
+    while (r.state.phase === 'openings' && tries++ < 3) {
+      r = await act({ type: 'statement', text: 'Members of the jury, the evidence will show a catastrophic accident, not a murder. You will hear that Mackenzie was a 17-year-old girl who nearly died in that car herself, and that the State cannot exclude a tragic loss of control.' + (tries > 1 ? ' I will confine myself to what the witnesses and exhibits will show.' : '') });
+      if (r.state.pending?.type === 'objection_response') {
+        r = await act({ type: 'respond', text: 'Your Honor, this is a proper preview of the evidence, not argument.' });
+      }
     }
     if (r.state.phase !== 'prosecution_case') throw new Error('did not reach prosecution case, got ' + r.state.phase);
 
@@ -110,9 +114,12 @@ async function main() {
 
     // Closings: prosecution (AI), then defense (user).
     r = await act({ type: 'proceed' });
-    r = await act({ type: 'statement', text: 'The State asks you to turn heartbreak into homicide. The black box tells you what the car did — it cannot tell you why. That gap is reasonable doubt, and reasonable doubt means not guilty.' });
-    if (r.state.pending?.type === 'objection_response') {
-      r = await act({ type: 'respond', text: 'Fair argument on the evidence, Your Honor.' });
+    tries = 0;
+    while (r.state.phase === 'closings' && tries++ < 3) {
+      r = await act({ type: 'statement', text: 'The State asks you to turn heartbreak into homicide. The black box tells you what the car did — it cannot tell you why. That gap is reasonable doubt, and reasonable doubt means not guilty.' + (tries > 1 ? ' I argue only from the admitted evidence.' : '') });
+      if (r.state.pending?.type === 'objection_response') {
+        r = await act({ type: 'respond', text: 'Fair argument on the evidence, Your Honor.' });
+      }
     }
     if (r.state.phase !== 'deliberation') throw new Error('did not reach deliberation, got ' + r.state.phase);
 
