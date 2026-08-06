@@ -111,22 +111,29 @@
     const btn = $('#btn-generate');
     const status = $('#gen-status');
     btn.disabled = true;
-    status.textContent = 'Drafting the case file — witnesses, exhibits, jurors… (up to a minute)';
+    const t0 = Date.now();
+    status.textContent = 'Drafting the case file — witnesses, exhibits, jurors… (usually 30–90 seconds)';
+    const ticker = setInterval(() => {
+      const s = Math.round((Date.now() - t0) / 1000);
+      status.textContent = `Drafting the case file — witnesses, exhibits, jurors… ${s}s (usually 30–90 seconds${s > 90 ? '; still working, hang tight' : ''})`;
+    }, 1000);
     try {
       const r = await api('/generate-case', {
         method: 'POST',
         body: JSON.stringify({ theme: $('#gen-theme').value.trim(), difficulty: Number($('#gen-difficulty').value) }),
       });
-      status.textContent = '';
       const { cases } = await api('/cases');
       S.cases = cases;
       renderCaseList();
       await showSidePicker(r.id);
       $('#side-difficulty').value = String(r.difficulty);
       $('#side-difficulty').dispatchEvent(new Event('input'));
+      clearInterval(ticker);
+      status.textContent = '';
     } catch (err) {
-      status.textContent = 'Generation failed: ' + err.message;
+      status.textContent = 'Generation failed: ' + err.message + ' — try again.';
     } finally {
+      clearInterval(ticker);
       btn.disabled = false;
     }
   };
