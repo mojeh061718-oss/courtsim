@@ -749,9 +749,9 @@
         break;
       }
       case 'deliberation':
-        addBtn(`Deliberate — round ${(st.deliberation.round || 0) + 1}`, () => send({ type: 'deliberate_round' }), 'btn primary');
-        input.placeholder = 'The jury is out. They deliberate alone — you can only listen.';
-        hint.textContent = 'Each round, all twelve jurors speak (for the first time in the whole trial) and vote in private.';
+        addBtn('Send the jury out', () => send({ type: 'deliberate_round' }), 'btn primary');
+        input.placeholder = 'The jury deliberates in private and returns only with a verdict.';
+        hint.textContent = 'Deliberations are secret — you\'ll get the full round-by-round juror sheet in your transcript after the verdict. This can take a minute or two.';
         break;
       case 'verdict':
         input.placeholder = 'The trial has concluded.';

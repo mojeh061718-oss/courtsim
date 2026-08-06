@@ -14,9 +14,12 @@ export function seatJury(caseFile) {
 }
 
 /**
- * Run one full round of deliberation: every juror speaks once (in seat order,
- * hearing everyone who spoke before them) and privately updates their votes.
- * Returns { messages, tally, unanimous, verdict } for the round.
+ * Run one full round of deliberation. All twelve jurors write CONCURRENTLY,
+ * each reacting to the complete discussion from every earlier round — like a
+ * jury room where each round of table talk digests the last. Convergence
+ * happens across rounds; within a round, positions are independent. This
+ * keeps deliberation to one call of latency per round instead of twelve.
+ * Returns { messages, tally, unanimous, done } for the round.
  */
 export async function runDeliberationRound(state, caseFile, jurorFacingRecord) {
   const delib = state.deliberation;
@@ -27,15 +30,15 @@ export async function runDeliberationRound(state, caseFile, jurorFacingRecord) {
     ? '\n- Party names have been partially anonymized in your record; this is normal, ignore it.'
     : '';
 
-  const messages = [];
-  for (const juror of state.jury) {
-    const priorTalk = delib.log
-      .map((m) => `Juror ${m.seat} (${m.name}): ${m.statement}`)
-      .join('\n');
+  // Snapshot of everything said in earlier rounds — the same for all twelve.
+  const priorTalk = delib.log
+    .map((m) => `[Round ${m.round}] Juror ${m.seat} (${m.name}): ${m.statement}`)
+    .join('\n');
+
+  const turns = await Promise.all(state.jury.map(async (juror) => {
     const sys = jurorSystem({ caseFile, juror, aliasNote, difficulty: profile(state.difficulty).juror });
     const task = jurorDeliberationTask({ charges: caseFile.charges, roundNo, isFirst });
-    const user = `THE TRIAL RECORD (everything you are permitted to consider):\n${jurorFacingRecord}\n\nTHE COURT'S INSTRUCTIONS:\n${caseFile.juryInstructions}\n\nDELIBERATION SO FAR:\n${priorTalk || '(You are the first to speak.)'}\n\n${task}`;
-
+    const user = `THE TRIAL RECORD (everything you are permitted to consider):\n${jurorFacingRecord}\n\nTHE COURT'S INSTRUCTIONS:\n${caseFile.juryInstructions}\n\nDISCUSSION IN EARLIER ROUNDS AROUND THE TABLE:\n${priorTalk || '(This is the first round — no one has spoken yet.)'}\n\n${task}`;
     const out = await chat(
       [
         { role: 'system', content: sys },
@@ -46,9 +49,15 @@ export async function runDeliberationRound(state, caseFile, jurorFacingRecord) {
         temperature: 0.85,
         effort: 'low',
         provider: 'xai',
+        hedgeDelayMs: 6000,
         mock: () => mockJurorTurn(juror, caseFile, delib, jurorFacingRecord),
       }
-    );
+    ).catch(() => mockJurorTurn(juror, caseFile, delib, jurorFacingRecord));
+    return { juror, out };
+  }));
+
+  const messages = [];
+  for (const { juror, out } of turns) {
     const entry = normalizeJurorTurn(out, juror, caseFile, delib, jurorFacingRecord);
     entry.round = roundNo;
     delib.log.push(entry);
