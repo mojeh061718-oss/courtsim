@@ -1,0 +1,19 @@
+{
+  "name": "courtsim",
+  "version": "1.0.0",
+  "description": "CourtSim — an attorney trial simulator. Argue real cases end-to-end against an AI opposing counsel (Grok), before an AI judge and a blind, deliberating AI jury.",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "smoke": "node scripts/smoke.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "license": "MIT"
+}

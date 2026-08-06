@@ -1,0 +1,98 @@
+name: CI & Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: courtsim
+  SERVICE_NAME: courtsim
+
+jobs:
+  test:
+    name: End-to-end smoke test (offline agents)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - name: Play a full trial through the API
+        run: npm run smoke
+        env:
+          GROK_API_KEY: ''
+          AWS_BEARER_TOKEN_BEDROCK: ''
+
+  deploy:
+    name: Deploy to AWS App Runner
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      # Deployment activates itself once AWS credentials exist as repo secrets;
+      # until then this job is a clearly-labeled no-op so main stays green.
+      - name: Check for AWS credentials
+        id: check
+        run: |
+          if [ -n "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Deployment skipped — add repo secrets AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, APP_RUNNER_ECR_ROLE_ARN, AWS_BEARER_TOKEN_BEDROCK, GROK_API_KEY to enable (see docs/DEPLOY_AWS.md)."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.check.outputs.deploy == 'true'
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        if: steps.check.outputs.deploy == 'true'
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: aws-actions/amazon-ecr-login@v2
+        if: steps.check.outputs.deploy == 'true'
+        id: ecr
+
+      - name: Ensure ECR repository exists
+        if: steps.check.outputs.deploy == 'true'
+        run: |
+          aws ecr describe-repositories --repository-names "$ECR_REPOSITORY" >/dev/null 2>&1 \
+            || aws ecr create-repository --repository-name "$ECR_REPOSITORY"
+
+      - name: Build and push image
+        if: steps.check.outputs.deploy == 'true'
+        run: |
+          IMAGE="${{ steps.ecr.outputs.registry }}/${ECR_REPOSITORY}:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+
+      - name: Create or update the App Runner service
+        if: steps.check.outputs.deploy == 'true'
+        uses: awslabs/amazon-app-runner-deploy@main
+        env:
+          LLM_PROVIDER: bedrock
+          AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          image: ${{ env.IMAGE }}
+          access-role-arn: ${{ secrets.APP_RUNNER_ECR_ROLE_ARN }}
+          region: ${{ env.AWS_REGION }}
+          cpu: 1
+          memory: 2
+          port: 3000
+          wait-for-service-stability-seconds: 600
+          copy-env-vars: |
+            LLM_PROVIDER
+            AWS_BEARER_TOKEN_BEDROCK
+            GROK_API_KEY
+
+      - name: Service URL
+        if: steps.check.outputs.deploy == 'true'
+        run: |
+          aws apprunner list-services --query "ServiceSummaryList[?ServiceName=='${SERVICE_NAME}'].ServiceUrl" --output text

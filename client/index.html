@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>CourtSim — Attorney Trial Simulator</title>
+  <meta name="description" content="Argue real cases end-to-end against an AI opposing counsel, judge, and blind deliberating jury." />
+  <meta name="theme-color" content="#12100d" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <!-- iOS / iPhone standalone app -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CourtSim" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- ============ CASE SELECTION ============ -->
+  <section id="screen-select" class="screen">
+    <header class="select-header">
+      <h1>CourtSim</h1>
+      <p class="tagline">Argue a real case end-to-end against an AI opposing counsel — before a judge who will hold you to the rules, and a blind jury that decides on the record you build.</p>
+    </header>
+    <div id="generator" class="generator-panel">
+      <h3>⚖️ Generate a new murder trial</h3>
+      <div class="gen-row">
+        <input id="gen-theme" type="text" maxlength="200" placeholder="Optional theme — e.g. 'poisoning at a family vineyard', 'cold case reopened by DNA'…" />
+      </div>
+      <div class="gen-row">
+        <label class="gen-label">Difficulty <span id="gen-diff-val">5</span>/10 — <span id="gen-diff-label">Seasoned litigator</span></label>
+        <input id="gen-difficulty" type="range" min="1" max="10" step="1" value="5" />
+      </div>
+      <div class="gen-row">
+        <button id="btn-generate" class="btn primary">Generate case</button>
+        <span id="gen-status" class="gen-status"></span>
+      </div>
+    </div>
+    <div id="case-list" class="case-grid"></div>
+    <div id="side-picker" class="side-picker hidden">
+      <h2 id="side-case-title"></h2>
+      <p id="side-case-blurb"></p>
+      <div id="case-detail"></div>
+      <div class="gen-row side-difficulty">
+        <label class="gen-label">Trial difficulty <span id="side-diff-val">5</span>/10 — <span id="side-diff-label">Seasoned litigator</span></label>
+        <input id="side-difficulty" type="range" min="1" max="10" step="1" value="5" />
+        <p class="basis-desc">Calibrates opposing counsel's skill, the judge's strictness, and how exacting the jury is.</p>
+      </div>
+      <div class="side-buttons">
+        <button id="btn-prosecution" class="btn side-btn">Argue for the PROSECUTION</button>
+        <button id="btn-defense" class="btn side-btn">Argue for the DEFENSE</button>
+        <button id="btn-back" class="btn ghost">Back</button>
+      </div>
+      <p class="disclaimer" id="case-disclaimer"></p>
+    </div>
+    <footer class="select-footer">
+      Educational simulation. Dramatization from public records — not legal advice. Voice: your browser's speech engine. Hotkeys in trial: <kbd>O</kbd> object · <kbd>Space</kbd> interrupt speech.
+    </footer>
+  </section>
+
+  <!-- ============ COURTROOM ============ -->
+  <section id="screen-court" class="screen hidden">
+    <header class="court-header">
+      <div class="court-title">
+        <span id="hdr-case"></span>
+        <span id="hdr-phase" class="phase-badge"></span>
+      </div>
+      <div class="court-status">
+        <span id="hdr-side" class="chip"></span>
+        <span id="hdr-score" class="chip score-chip" title="Your accountability ledger"></span>
+        <button id="btn-mute" class="btn small ghost" title="Toggle voice">🔊 Voice on</button>
+        <button id="btn-transcript" class="btn small ghost" title="Open the court transcript (print view)">📄 Transcript</button>
+        <button id="btn-drawer" class="btn small ghost drawer-toggle" title="Jury, witnesses, evidence, motions">📋 Court file</button>
+      </div>
+    </header>
+
+    <main class="court-main">
+      <div id="drawer-backdrop" class="drawer-backdrop"></div>
+      <aside class="left-col">
+        <div class="drawer-handle" id="drawer-handle" aria-label="Close court file"><span></span></div>
+        <div class="panel jury-panel">
+          <h3>Jury</h3>
+          <div id="jury-box" class="jury-box"></div>
+        </div>
+        <div class="panel dockets">
+          <div class="tabs">
+            <button class="tab active" data-tab="witnesses">Witnesses</button>
+            <button class="tab" data-tab="evidence">Evidence</button>
+            <button class="tab" data-tab="motions">Motions</button>
+          </div>
+          <div id="tab-witnesses" class="tab-body"></div>
+          <div id="tab-evidence" class="tab-body hidden"></div>
+          <div id="tab-motions" class="tab-body hidden"></div>
+        </div>
+      </aside>
+
+      <section class="center-col">
+        <div id="transcript" class="transcript" aria-live="polite"></div>
+
+        <div id="pending-banner" class="pending-banner hidden"></div>
+
+        <div class="controls">
+          <div class="control-row" id="action-buttons"></div>
+          <div class="input-row">
+            <textarea id="input-text" rows="3" placeholder="Type your statement, question, or motion…"></textarea>
+            <div class="stack">
+              <button id="btn-send" class="btn primary">Send</button>
+              <button id="btn-objection" class="btn danger" title="Object (O)">OBJECTION&nbsp;(O)</button>
+            </div>
+          </div>
+          <div class="hint" id="control-hint"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Objection modal (user objecting) -->
+    <div id="objection-modal" class="modal hidden">
+      <div class="modal-card">
+        <h3>State your objection</h3>
+        <p class="modal-sub" id="objection-target-preview"></p>
+        <label>Basis</label>
+        <select id="objection-basis"></select>
+        <p class="basis-desc" id="objection-basis-desc"></p>
+        <label>Argue it (why should the court sustain you?)</label>
+        <textarea id="objection-argument" rows="3" placeholder="Your Honor, …"></textarea>
+        <div class="modal-actions">
+          <button id="btn-objection-submit" class="btn danger">Object</button>
+          <button id="btn-objection-cancel" class="btn ghost">Withdraw</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verdict banner -->
+    <div id="verdict-banner" class="verdict-banner hidden"></div>
+  </section>
+
+  <script src="speech.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
