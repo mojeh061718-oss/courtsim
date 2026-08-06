@@ -42,6 +42,7 @@
       <h2 id="side-case-title"></h2>
       <p id="side-case-blurb"></p>
       <div id="case-detail"></div>
+      <div id="case-hurdles" class="hurdles-wrap"></div>
       <div class="gen-row side-difficulty">
         <label class="gen-label">Trial difficulty <span id="side-diff-val">5</span>/10 — <span id="side-diff-label">Seasoned litigator</span></label>
         <input id="side-difficulty" type="range" min="1" max="10" step="1" value="5" />
@@ -112,9 +113,11 @@
             <div class="stack">
               <button id="btn-send" class="btn primary">Send</button>
               <button id="btn-objection" class="btn danger" title="Object (O)">OBJECTION&nbsp;(O)</button>
+              <button id="btn-binder-quick" class="btn ghost binder-quick" title="Open your case binder">📓 Binder</button>
             </div>
           </div>
           <div class="hint" id="control-hint"></div>
+          <div class="error-line hidden" id="error-line"></div>
         </div>
       </section>
     </main>

@@ -42,7 +42,7 @@ const DEFAULTS = {
   baseUrl: process.env.GROK_BASE_URL || PRESET.baseUrl,
   model: process.env.GROK_MODEL || PRESET.model,
   apiKey: KEYS[PROVIDER] || KEYS.xai,
-  timeoutMs: Number(process.env.GROK_TIMEOUT_MS || 90000),
+  timeoutMs: Number(process.env.GROK_TIMEOUT_MS || 45000),
 };
 
 export function hasLiveModel() {
@@ -84,48 +84,62 @@ export async function chat(messages, opts = {}) {
   const apiKey = prov ? (prov === 'xai' ? NATIVE_KEY : KEYS.bedrock) : DEFAULTS.apiKey;
   if (!apiKey) return mock ? mock() : null;
   const timeoutMs = opts.timeoutMs || DEFAULTS.timeoutMs;
-  const attempts = opts.attempts || 3;
+  const attempts = opts.attempts || 2;
 
-  const body = {
-    model,
-    messages,
-    temperature,
-  };
-  if (json) body.response_format = { type: 'json_object' };
-  // Grok 4.3's always-on reasoning can be dialed down per call (opts.effort:
-  // 'none'|'low'|'medium'|'high') — big latency win for creative/mechanical
-  // calls. Verified on bedrock-mantle; guarded there to avoid rejects elsewhere.
-  if (opts.effort && (prov || PROVIDER) === 'bedrock') body.reasoning_effort = opts.effort;
+  // Cross-provider failover: if the preferred endpoint stalls (e.g. Bedrock's
+  // new-account throughput ramp), retry the SAME call on the other provider
+  // before surrendering to the offline mock. Order: preferred, then the other
+  // one if its key is configured.
+  const primary = prov || PROVIDER;
+  const lanes = [{ baseUrl, model, apiKey, provider: primary }];
+  const other = primary === 'bedrock' ? 'xai' : 'bedrock';
+  const otherKey = other === 'xai' ? NATIVE_KEY : process.env.AWS_BEARER_TOKEN_BEDROCK;
+  if (otherKey && !opts.noFailover) {
+    lanes.push({ baseUrl: PRESETS[other].baseUrl, model: PRESETS[other].model, apiKey: otherKey, provider: other });
+  }
 
   let lastErr;
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    try {
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-      const res = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify(body),
-        signal: ctrl.signal,
-      });
-      clearTimeout(timer);
-      if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(`xAI API ${res.status}: ${text.slice(0, 300)}`);
+  for (const lane of lanes) {
+    const body = {
+      model: lane.model,
+      messages,
+      temperature,
+    };
+    if (json) body.response_format = { type: 'json_object' };
+    // Grok 4.3's always-on reasoning can be dialed down per call (opts.effort:
+    // 'none'|'low'|'medium'|'high') — big latency win for creative/mechanical
+    // calls. Verified on bedrock-mantle; guarded there to avoid rejects elsewhere.
+    if (opts.effort && lane.provider === 'bedrock') body.reasoning_effort = opts.effort;
+
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+        const res = await fetch(`${lane.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${lane.apiKey}`,
+          },
+          body: JSON.stringify(body),
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        if (!res.ok) {
+          const text = await res.text().catch(() => '');
+          throw new Error(`${lane.provider} API ${res.status}: ${text.slice(0, 300)}`);
+        }
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content ?? '';
+        return json ? parseJsonLoose(content, mock) : content;
+      } catch (err) {
+        lastErr = err;
+        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
       }
-      const data = await res.json();
-      const content = data.choices?.[0]?.message?.content ?? '';
-      return json ? parseJsonLoose(content, mock) : content;
-    } catch (err) {
-      lastErr = err;
-      // retry transient failures with backoff
-      await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
     }
+    console.error(`[grok] ${lane.provider} lane exhausted:`, lastErr?.message, '- trying next lane');
   }
-  console.error('[grok] falling back to offline mode:', lastErr?.message);
+  console.error('[grok] all lanes failed, using offline fallback:', lastErr?.message);
   return mock ? mock() : null;
 }
 
