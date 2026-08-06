@@ -175,6 +175,23 @@ input[type="range"] { accent-color: var(--brass); width: 100%; }
 }
 .strategy-status { color: var(--brass); font-size: 0.82rem; padding: 10px 4px; font-style: italic; }
 
+/* War-room court dock — address the court without leaving the sheet */
+.war-dock-wrap { position: sticky; top: 0; z-index: 3; background: var(--panel); padding-bottom: 6px; }
+.war-dock { border: 1px solid var(--brass); border-radius: 8px; padding: 8px; background: var(--panel-2); }
+.war-hint { color: var(--ink-dim); font-size: 0.74rem; margin-bottom: 6px; min-height: 1em; }
+.war-input-row { display: flex; gap: 6px; align-items: stretch; }
+.war-input-row textarea {
+  flex: 1; min-width: 0; background: var(--panel); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px;
+  font-family: inherit; font-size: 16px; resize: vertical;
+}
+.war-input-row .btn { flex-shrink: 0; align-self: stretch; }
+.war-last {
+  margin-top: 6px; color: var(--ink-dim); font-size: 0.78rem;
+  border-left: 2px solid var(--brass); padding: 4px 8px;
+  max-height: 76px; overflow-y: auto; white-space: pre-wrap;
+}
+
 .center-col { display: flex; flex-direction: column; min-height: 0; gap: 8px; }
 .transcript {
   flex: 1; overflow-y: auto; background: var(--panel); border: 1px solid var(--line);
