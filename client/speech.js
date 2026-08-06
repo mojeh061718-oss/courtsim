@@ -36,12 +36,25 @@
 
   /* ---------- Polly path ---------- */
 
-  async function fetchAudio(text, role, key) {
+  function settings() {
+    return window.CourtSettings || {};
+  }
+
+  function resolveVoice(role, gender) {
+    const s = settings();
+    if (role === 'judge') return s.judge;
+    if (role === 'ai_counsel') return s.counsel;
+    if (role === 'clerk') return s.clerk;
+    if (role === 'witness') return gender === 'f' ? s.witnessF : gender === 'm' ? s.witnessM : s.witnessF;
+    return undefined; // jurors keep the server-side ensemble
+  }
+
+  async function fetchAudio(text, role, key, gender) {
     try {
       const res = await fetch('/api/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, role, key }),
+        body: JSON.stringify({ text, role, key, voice: resolveVoice(role, gender) }),
       });
       if (!res.ok) return null;
       const blob = await res.blob();
@@ -63,7 +76,10 @@
       audioEl.addEventListener('ended', done);
       audioEl.addEventListener('error', done);
       audioEl.src = url;
-      audioEl.play().catch(done);
+      const rate = Number(settings().speed) || 1;
+      audioEl.defaultPlaybackRate = rate;
+      audioEl.playbackRate = rate;
+      audioEl.play().then(() => { audioEl.playbackRate = rate; }).catch(done);
     });
   }
 
@@ -82,7 +98,7 @@
     return new Promise((resolve) => {
       if (!synth || !text.trim()) return resolve();
       const u = new SpeechSynthesisUtterance(text);
-      u.rate = 1.0; // natural pace — slowing it is what sounds "underwater"
+      u.rate = Number(settings().speed) || 1.0; // natural pace — slowing it is what sounds "underwater"
       const v = pickVoice(role);
       if (v) u.voice = v;
       const watchdog = setInterval(() => {
@@ -110,7 +126,7 @@
       item.blobs = item.paragraphs.map(() => null);
       const prefetch = (i) => {
         if (i < item.paragraphs.length && !item.blobs[i]) {
-          item.blobs[i] = fetchAudio(item.paragraphs[i], item.role, item.key);
+          item.blobs[i] = fetchAudio(item.paragraphs[i], item.role, item.key, item.gender);
         }
       };
       prefetch(0);
@@ -123,7 +139,7 @@
         prefetch(i + 1); // keep the pipeline one paragraph ahead
         if (queue[0]) {
           queue[0].blobs = queue[0].blobs || queue[0].paragraphs.map(() => null);
-          if (!queue[0].blobs[0]) queue[0].blobs[0] = fetchAudio(queue[0].paragraphs[0], queue[0].role, queue[0].key);
+          if (!queue[0].blobs[0]) queue[0].blobs[0] = fetchAudio(queue[0].paragraphs[0], queue[0].role, queue[0].key, queue[0].gender);
         }
         if (muted) continue;
         const blob = await item.blobs[i];
@@ -159,9 +175,24 @@
     },
 
     /** Queue an event for narration. paragraphs: string[]; key varies juror voices. */
-    enqueue({ eventId, paragraphs, role, key, onParagraph, onDone }) {
-      queue.push({ eventId, paragraphs, role, key: key ?? 0, onParagraph, onDone });
+    enqueue({ eventId, paragraphs, role, key, gender, onParagraph, onDone }) {
+      queue.push({ eventId, paragraphs, role, key: key ?? 0, gender: gender || null, onParagraph, onDone });
       pump();
+    },
+
+    /** Play a short sample of a specific voice (settings menu preview). */
+    async preview(voiceId) {
+      try {
+        const res = await fetch('/api/tts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: 'May it please the court. We are ready to proceed.', role: 'witness', voice: voiceId }),
+        });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        this.interrupt();
+        await playBlob(blob);
+      } catch { /* no-op */ }
     },
 
     /** Stop mid-word. Returns {eventId, paragraphIndex} of what was speaking. */

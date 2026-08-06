@@ -75,10 +75,10 @@ router.post('/trial', (req, res) => {
 });
 
 router.post('/tts', async (req, res) => {
-  const { text, role, key } = req.body || {};
+  const { text, role, key, voice } = req.body || {};
   if (!text || !String(text).trim()) return res.status(400).json({ error: 'no text' });
   try {
-    const audio = await synthesize({ text: String(text), role: String(role || 'witness'), key });
+    const audio = await synthesize({ text: String(text), role: String(role || 'witness'), key, voice: String(voice || '') });
     if (!audio) return res.status(503).json({ error: 'tts unavailable' });
     res.set('Content-Type', 'audio/mpeg');
     res.set('Cache-Control', 'no-store');

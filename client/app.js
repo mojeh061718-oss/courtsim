@@ -210,6 +210,7 @@
           paragraphs,
           role: ev.actor,
           key: seat,
+          gender: ev.meta?.gender || null,
           onParagraph: highlightParagraph,
           onDone: clearHighlight,
         });
@@ -735,7 +736,7 @@
       e.preventDefault();
       openObjectionModal();
     }
-    if (e.key === 'Escape') $('#objection-modal').classList.add('hidden');
+    if (e.key === 'Escape') { $('#objection-modal').classList.add('hidden'); $('#settings-modal').classList.add('hidden'); }
   });
 
   // One-tap binder: opens the Court file (drawer on phones) directly on the
@@ -752,6 +753,77 @@
   $('#btn-mute').onclick = () => {
     CourtSpeech.setMuted(!CourtSpeech.muted);
     $('#btn-mute').textContent = CourtSpeech.muted ? '🔇 Voice off' : '🔊 Voice on';
+  };
+
+  /* ================= voice settings ================= */
+
+  const VOICES = [
+    { id: 'Matthew', label: 'Matthew — deep, deliberate (M)' },
+    { id: 'Stephen', label: 'Stephen — crisp, professional (M)' },
+    { id: 'Gregory', label: 'Gregory — warm, measured (M)' },
+    { id: 'Joey', label: 'Joey — younger, direct (M)' },
+    { id: 'Joanna', label: 'Joanna — clear, composed (F)' },
+    { id: 'Ruth', label: 'Ruth — natural, expressive (F)' },
+    { id: 'Danielle', label: 'Danielle — smooth, steady (F)' },
+    { id: 'Kendra', label: 'Kendra — calm, precise (F)' },
+    { id: 'Kimberly', label: 'Kimberly — bright, engaged (F)' },
+    { id: 'Salli', label: 'Salli — light, quick (F)' },
+  ];
+  const DEFAULT_SETTINGS = { speed: 1, judge: 'Matthew', counsel: 'Stephen', clerk: 'Joanna', witnessM: 'Gregory', witnessF: 'Ruth' };
+
+  function loadSettings() {
+    try {
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(localStorage.getItem('courtsim-voices') || '{}') };
+    } catch {
+      return { ...DEFAULT_SETTINGS };
+    }
+  }
+  function saveSettings() {
+    localStorage.setItem('courtsim-voices', JSON.stringify(window.CourtSettings));
+  }
+  window.CourtSettings = loadSettings();
+
+  const SETTING_FIELDS = [
+    ['set-judge', 'judge'],
+    ['set-counsel', 'counsel'],
+    ['set-witnessM', 'witnessM'],
+    ['set-witnessF', 'witnessF'],
+    ['set-clerk', 'clerk'],
+  ];
+  function initSettingsUI() {
+    for (const [selId, keyName] of SETTING_FIELDS) {
+      const sel = document.getElementById(selId);
+      sel.innerHTML = '';
+      for (const v of VOICES) {
+        const o = el('option', null, v.label);
+        o.value = v.id;
+        sel.appendChild(o);
+      }
+      sel.value = window.CourtSettings[keyName];
+      sel.onchange = () => {
+        window.CourtSettings[keyName] = sel.value;
+        saveSettings();
+        CourtSpeech.preview(sel.value);
+      };
+    }
+    const speed = $('#set-speed');
+    speed.value = String(window.CourtSettings.speed);
+    const paint = () => { $('#speed-val').textContent = Number(speed.value).toFixed(2).replace(/0$/, '') + '×'; };
+    paint();
+    speed.oninput = () => {
+      window.CourtSettings.speed = Number(speed.value);
+      saveSettings();
+      paint();
+    };
+  }
+  initSettingsUI();
+
+  $('#btn-settings').onclick = () => $('#settings-modal').classList.remove('hidden');
+  $('#btn-settings-close').onclick = () => $('#settings-modal').classList.add('hidden');
+  $('#btn-settings-reset').onclick = () => {
+    window.CourtSettings = { ...DEFAULT_SETTINGS };
+    saveSettings();
+    initSettingsUI();
   };
 
   /* ================= PWA / mobile ================= */

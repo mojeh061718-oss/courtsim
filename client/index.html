@@ -71,6 +71,7 @@
         <span id="hdr-side" class="chip"></span>
         <span id="hdr-score" class="chip score-chip" title="Your accountability ledger"></span>
         <button id="btn-mute" class="btn small ghost" title="Toggle voice">🔊 Voice on</button>
+        <button id="btn-settings" class="btn small ghost" title="Voice settings">⚙️ Voices</button>
         <button id="btn-transcript" class="btn small ghost" title="Open the court transcript (print view)">📄 Transcript</button>
         <button id="btn-drawer" class="btn small ghost drawer-toggle" title="Jury, witnesses, evidence, motions">📋 Court file</button>
       </div>
@@ -135,6 +136,30 @@
         <div class="modal-actions">
           <button id="btn-objection-submit" class="btn danger">Object</button>
           <button id="btn-objection-cancel" class="btn ghost">Withdraw</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Voice settings -->
+    <div id="settings-modal" class="modal hidden">
+      <div class="modal-card settings-card">
+        <h3>🎙️ Voice settings</h3>
+        <label>Speech speed — <span id="speed-val">1.0×</span></label>
+        <input id="set-speed" type="range" min="0.7" max="1.4" step="0.05" value="1" />
+        <label>Judge</label>
+        <select id="set-judge"></select>
+        <label>Opposing counsel</label>
+        <select id="set-counsel"></select>
+        <label>Witnesses — male</label>
+        <select id="set-witnessM"></select>
+        <label>Witnesses — female</label>
+        <select id="set-witnessF"></select>
+        <label>Clerk</label>
+        <select id="set-clerk"></select>
+        <p class="basis-desc">Changing a voice plays a short preview. The jury keeps its mixed twelve-voice panel; speed applies to everyone.</p>
+        <div class="modal-actions">
+          <button id="btn-settings-reset" class="btn ghost">Reset</button>
+          <button id="btn-settings-close" class="btn primary">Done</button>
         </div>
       </div>
     </div>
