@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>CourtSim — Attorney Trial Simulator</title>
   <meta name="description" content="Argue real cases end-to-end against an AI opposing counsel, judge, and blind deliberating jury." />
   <meta name="theme-color" content="#12100d" />
@@ -112,7 +112,7 @@
             <textarea id="input-text" rows="3" placeholder="Type your statement, question, or motion…"></textarea>
             <div class="stack">
               <button id="btn-send" class="btn primary">Send</button>
-              <button id="btn-objection" class="btn danger" title="Object (O)">OBJECTION&nbsp;(O)</button>
+              <button id="btn-objection" class="btn danger" title="Object (O)">OBJECTION<span class="hotkey-hint">&nbsp;(O)</span></button>
               <button id="btn-binder-quick" class="btn ghost binder-quick" title="Open your case binder">📓 Binder</button>
             </div>
           </div>
