@@ -666,11 +666,16 @@
     return false;
   }
 
+  function modalOpen() {
+    return !$('#objection-modal').classList.contains('hidden') || !$('#settings-modal').classList.contains('hidden');
+  }
+
   function maybeAutoAdvance() {
     if (!S.autoAdvance) return;
     clearTimeout(S._autoTimer);
     S._autoTimer = setTimeout(() => {
       if (!S.autoAdvance || S.busy || !aiHasNext()) return;
+      if (modalOpen()) return; // the room waits while counsel is on their feet
       if (CourtSpeech.isSpeaking()) return maybeAutoAdvance();
       // Objection window: give the attorney a beat before the next step lands.
       const st = S.state;
@@ -684,7 +689,8 @@
   function openObjectionModal() {
     const st = S.state;
     if (!st || st.phase === 'pretrial' || st.phase === 'verdict') return;
-    // Freeze the room: stop speech exactly where it is.
+    // Freeze the room: stop speech AND the auto-advance clock exactly here.
+    clearTimeout(S._autoTimer);
     const at = CourtSpeech.interrupt() || S.lastSpokenTarget;
     S.objectionTarget = at;
     const targetEv = at && document.querySelector(`[data-event-id="${at.eventId}"]`);
@@ -712,7 +718,10 @@
   }
 
   $('#btn-objection').onclick = openObjectionModal;
-  $('#btn-objection-cancel').onclick = () => $('#objection-modal').classList.add('hidden');
+  $('#btn-objection-cancel').onclick = () => {
+    $('#objection-modal').classList.add('hidden');
+    maybeAutoAdvance();
+  };
   $('#btn-objection-submit').onclick = () => {
     const basis = $('#objection-basis').value;
     const argument = $('#objection-argument').value.trim();
@@ -736,7 +745,7 @@
       e.preventDefault();
       openObjectionModal();
     }
-    if (e.key === 'Escape') { $('#objection-modal').classList.add('hidden'); $('#settings-modal').classList.add('hidden'); }
+    if (e.key === 'Escape') { $('#objection-modal').classList.add('hidden'); $('#settings-modal').classList.add('hidden'); maybeAutoAdvance(); }
   });
 
   // One-tap binder: opens the Court file (drawer on phones) directly on the
@@ -818,8 +827,14 @@
   }
   initSettingsUI();
 
-  $('#btn-settings').onclick = () => $('#settings-modal').classList.remove('hidden');
-  $('#btn-settings-close').onclick = () => $('#settings-modal').classList.add('hidden');
+  $('#btn-settings').onclick = () => {
+    clearTimeout(S._autoTimer);
+    $('#settings-modal').classList.remove('hidden');
+  };
+  $('#btn-settings-close').onclick = () => {
+    $('#settings-modal').classList.add('hidden');
+    maybeAutoAdvance();
+  };
   $('#btn-settings-reset').onclick = () => {
     window.CourtSettings = { ...DEFAULT_SETTINGS };
     saveSettings();
