@@ -55,7 +55,7 @@ ${difficulty ? `\nSKILL CALIBRATION FOR THIS SESSION:\n${difficulty}\n` : ''}Cur
 export function counselReviewSystem({ caseFile, side, difficulty }) {
   return `${counselSystem({ caseFile, side, phaseLabel: 'reviewing opposing counsel submission', difficulty })}
 
-TASK: Opposing counsel has just made a submission (statement, question, or argument). The jury
+TASK: Opposing counsel has just made a submission (a statement or a question). The jury
 has NOT yet heard it. Decide whether to object before it reaches the jury.
 
 APPROVED OBJECTION BASES:
@@ -63,15 +63,35 @@ ${basesForPrompt()}
 
 Respond with ONLY a JSON object:
 {"object": true|false, "basis": "<basis id or null>", "argument": "<1-3 spoken sentences arguing the objection, or null>"}
-Object only on a genuine, articulable basis. If the submission is proper — even if damaging to
-your case — respond {"object": false, "basis": null, "argument": null}.
+DEFAULT: DO NOT OBJECT. Object only when you can name the concrete harm a ruling would
+prevent AND that harm matters at your SKILL CALIBRATION above — if your calibration says to
+let borderline material pass, pass it. Each overruled objection costs you credibility with
+the court and the jury; weigh that cost before answering {"object": true}. If the submission
+is proper — even if damaging to your case — respond {"object": false, "basis": null, "argument": null}.
 STRICT ACCURACY RULES:
 - Your objection must describe ONLY what the submission actually says. Re-read it before
   objecting; if the objectionable content is not literally in it, do not attribute it.
+- Judge the submission ON ITS OWN FACE. Never import content from earlier questions, answers,
+  or rulings into it — a question is compound, assumptive, or narrative only if its own words
+  make it so.
+- Any claim your objection makes about the prior record must be literally true of the
+  transcript. A witness's "I don't recall" does not erase her earlier affirmative testimony.
+- "Assumes facts not in evidence" NEVER lies against a question asking WHETHER something
+  exists or happened — existence and foundation questions assume nothing. It also never lies
+  where this witness's own unstricken testimony supplied the premise.
+- Do not object to the refreshing-recollection sequence: once a witness says her memory is
+  exhausted and a writing would refresh it, showing her the writing and asking the follow-up
+  is proper. An expert may always be asked what the materials she reviewed contain or omit.
+- Objections lie only against questions, testimony, and exhibits offered to the jury. NEVER
+  object to opposing counsel's argument addressed to the court on a pending objection or
+  motion — that is the judge's to police, not yours.
+- A standing exclusion with a stated exception (e.g. "absent qualified expert testimony") does
+  not support an objection when the exception is satisfied.
+- Never re-raise a basis the court has overruled this examination absent genuinely new grounds.
 - On opposing counsel's DIRECT examination of their own witness, open-ended questions are
   PROPER — including invitations to describe qualifications, background, what the witness
   reviewed, and what they observed. "Calls for a narrative" applies only to truly unbounded
-  invitations ("tell us everything about the case"), not ordinary direct questions.
+  invitations ("tell us everything about the case"), never a yes/no question.
 - A question about a witness's education or experience never violates an evidentiary exclusion.`;
 }
 
@@ -111,14 +131,35 @@ export function judgeRulingTask({ pretrialExclusions }) {
 the context in the record, and these standing pretrial exclusions you have ordered:
 ${pretrialExclusions.length ? pretrialExclusions.map((e) => `- ${e}`).join('\n') : '- (none)'}
 
-VERIFY THE PREMISE FIRST: if the objection claims the record or prior testimony says something
-it does not actually say in the transcript provided, the objection is OVERRULED and your
-reasoning must say the premise misdescribes the record.
+VERIFY THE PREMISE FIRST, IN BOTH DIRECTIONS: the objection is OVERRULED, and your reasoning
+must say its premise misdescribes the record, if it claims the record or prior testimony says
+something the transcript does not actually say — OR claims the record LACKS something the
+transcript actually contains (e.g. "no such testimony has been given" when a witness's
+unstricken answer gave it). A witness's "I don't recall" is an answer, never a defect in a
+question, and it does not negate that witness's earlier affirmative testimony.
+
+BEFORE SUSTAINING, CHECK THE DOCTRINE:
+- "Assumes facts not in evidence" cannot be sustained against a question asking WHETHER a
+  fact, document, or value exists, nor where this witness's own unstricken testimony supplied
+  the premise.
+- Refreshed recollection: once the witness has said her memory is exhausted, that a writing
+  would refresh it, and that she has reviewed it, the follow-up question MUST be allowed —
+  "the document contains no such values" is then her answer, not a ground to block the question.
+- An expert may be examined on what the materials she reviewed contain or omit, whether or not
+  those materials are admitted exhibits.
+- Sustain "calls for a narrative" only against truly unbounded invitations, never a yes/no
+  question. Sustain "asked and answered" only where the same SUBSTANTIVE question was actually
+  ANSWERED; foundation steps repeated because the witness professed non-recall are not cumulative.
+Rule on THE CHALLENGED MATERIAL exactly as quoted, not on the objector's paraphrase of it. On
+direct examination, doubt goes to the proponent: if the witness can properly answer — including
+with "no" or "I don't know" — overrule and let her answer.
 
 Respond with ONLY a JSON object:
 {"ruling": "sustained"|"overruled", "reasoning": "<= 2 spoken sentences>",
  "admonishment": "<spoken admonishment to the offending party, or null>",
  "instruct_disregard": true|false}
+Give an admonishment ONLY for misconduct you can point to in the transcript; never admonish
+counsel for accurately describing the record. Default admonishment to null.
 Set instruct_disregard true only when the jury heard something they must now disregard.`;
 }
 
@@ -154,14 +195,29 @@ DEMEANOR: ${witness.demeanor}
 TESTIMONY RULES:
 1. Answer only the question asked. Do not volunteer, do not narrate beyond the question.
 2. First person, natural spoken answers. Usually 1-4 sentences; longer only if asked to explain.
-3. If a question goes beyond your knowledge above: say you don't know or don't recall. NEVER
-   invent case facts. EXCEPTION — your own background: your education, training, career history,
-   and credentials consistent with your description are always within your knowledge; answer
-   qualification questions confidently with specific, plausible detail. Never claim you cannot
-   recall your own schooling or experience.
-4. If a question mischaracterizes what you know, push back politely and correct it.
-5. You may show human memory limits, hedging, and emotion consistent with your demeanor.
-6. On cross-examination you may be guarded, but you must concede facts squarely within your
+3. Your knowledge above is COMPLETE. A fact absent from it does not exist in this case: never
+   invent it, and never imply it might exist.
+   - Events you could have perceived but your knowledge omits: answer "I don't know" or
+     "I don't recall."
+   - Documents, records, tests, and data YOU reviewed: you know both what they contain and
+     what they do not. If your knowledge states no quantified values, substances, or findings,
+     say so definitively — "The records I reviewed contain no quantified THC concentrations" —
+     NEVER "I don't recall whether" your own materials contain something; that falsely implies
+     undisclosed facts may exist.
+   - Never supply specific case data (substances, numbers, test results, document contents)
+     your knowledge does not state, however plausible for someone in your position.
+   EXCEPTION — your own background: education, training, career history, and credentials
+   consistent with your description are always within your knowledge; answer them confidently
+   with specific, plausible detail. Never claim you cannot recall your own schooling or
+   experience. This exception never extends to case facts.
+4. Stay consistent with your prior answers this session. If an earlier answer overstated your
+   knowledge, correct it expressly on the record ("Let me correct my earlier answer...") rather
+   than contradicting it or retreating to "I don't recall."
+5. If counsel addresses the COURT ("Your Honor...", motions, recess requests), that is not a
+   question to you — say nothing and wait for the court.
+6. If a question mischaracterizes what you know, push back politely and correct it.
+7. You may show human memory limits, hedging, and emotion consistent with your demeanor.
+8. On cross-examination you may be guarded, but you must concede facts squarely within your
    knowledge when directly confronted — you are under oath.`;
 }
 

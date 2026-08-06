@@ -19,7 +19,7 @@ export const OBJECTION_BASES = [
   { id: 'improper_opinion', label: 'Improper lay opinion', rule: 'FRE 701', desc: 'Lay witness offering opinion not rationally based on their perception.' },
   { id: 'expert_qualification', label: 'Unqualified expert / unreliable method', rule: 'FRE 702 (Daubert)', desc: 'Witness not qualified, or methodology not reliable/accepted.' },
   { id: 'beyond_scope', label: 'Beyond the scope', rule: 'FRE 611(b)', desc: 'Cross/redirect exceeds the scope of the prior examination.' },
-  { id: 'facts_not_in_evidence', label: 'Assumes facts not in evidence', rule: 'FRE 611', desc: 'Question presumes facts that have not been established.' },
+  { id: 'facts_not_in_evidence', label: 'Assumes facts not in evidence', rule: 'FRE 611', desc: 'Question presumes disputed facts no testimony or exhibit in this record supports. Testimony IS evidence; a question asking WHETHER something exists assumes nothing.' },
   { id: 'misstates', label: 'Misstates the evidence', rule: 'FRE 611', desc: 'Question or argument mischaracterizes prior testimony or exhibits.' },
   { id: 'cumulative', label: 'Cumulative', rule: 'FRE 403', desc: 'Needlessly repetitive of evidence already admitted.' },
   { id: 'privilege', label: 'Privilege', rule: 'FRE 501', desc: 'Calls for privileged communication (attorney-client, spousal, etc.).' },
