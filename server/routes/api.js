@@ -5,6 +5,7 @@ import { OBJECTION_BASES } from '../engine/objections.js';
 import { researchCase } from '../research/publicData.js';
 import { buildTranscript } from '../engine/transcript.js';
 import { generateCase } from '../generator/caseGenerator.js';
+import { buildStrategySheet } from '../engine/strategy.js';
 import { synthesize } from '../tts/polly.js';
 import { chat } from '../llm/grokClient.js';
 import { hasLiveModel, providerInfo } from '../llm/grokClient.js';
@@ -125,6 +126,26 @@ router.post('/generate-case', async (req, res) => {
   } catch (err) {
     console.error('[generate]', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// War-room strategy sheet: confidential work product for the human attorney.
+// Cached per trial. Never enters the record, the transcript, or any AI
+// actor's context — the court cannot see it and it affects nothing.
+router.post('/trial/:id/strategy', async (req, res) => {
+  const s = sessions.get(req.params.id);
+  if (!s) return res.status(404).json({ error: 'unknown trial' });
+  if (s.strategy) return res.json({ strategy: s.strategy, cached: true });
+  if (s.strategyBusy) return res.status(429).json({ error: 'your team is still drafting the sheet' });
+  s.strategyBusy = true;
+  try {
+    s.strategy = await buildStrategySheet(s.caseFile, s.state.userSide);
+    res.json({ strategy: s.strategy, cached: false });
+  } catch (err) {
+    console.error('[strategy]', err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    s.strategyBusy = false;
   }
 });
 

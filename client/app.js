@@ -184,6 +184,9 @@
     S.trialId = r.trialId;
     S.state = r.state;
     S.pretrialDone = false;
+    S.strategy = null;
+    S.strategyLoading = false;
+    $('#strategy-content').innerHTML = '';
     $('#screen-select').classList.add('hidden');
     $('#screen-court').classList.remove('hidden');
     $('#hdr-case').textContent = S.selectedCase.title;
@@ -437,8 +440,102 @@
       tab.classList.add('active');
       document.querySelectorAll('.tab-body').forEach((b) => b.classList.add('hidden'));
       $('#tab-' + tab.dataset.tab).classList.remove('hidden');
+      if (tab.dataset.tab === 'strategy') loadStrategy();
     };
   });
+
+  /* ============ War room — private strategy sheet ============ */
+  // Work product for the user only: the server never shows it to any AI actor
+  // and it never enters the record. Generated once per trial, then cached.
+
+  async function loadStrategy() {
+    if (S.strategy || S.strategyLoading || !S.trialId) return;
+    S.strategyLoading = true;
+    const root = $('#strategy-content');
+    root.innerHTML = '';
+    const status = el('div', 'strategy-status', 'Your team is around the table…');
+    root.appendChild(status);
+    const lines = ['Your team is around the table…', 'Arguing over the case themes…', 'Going witness by witness…', 'Drafting your direct and cross questions…', 'Flagging the exhibits that matter…', 'Almost done — tightening the sheet…'];
+    let i = 0;
+    const ticker = setInterval(() => { status.textContent = lines[Math.min(++i, lines.length - 1)]; }, 9000);
+    try {
+      const r = await api(`/trial/${S.trialId}/strategy`, { method: 'POST', body: '{}', timeoutMs: 200000 });
+      S.strategy = r.strategy;
+      renderStrategy();
+    } catch (err) {
+      root.innerHTML = '';
+      const retry = el('button', 'btn ghost', 'Prep session failed — tap to try again');
+      retry.onclick = () => { S.strategyLoading = false; loadStrategy(); };
+      root.appendChild(retry);
+      showError('Could not build the strategy sheet: ' + err.message);
+      return;
+    } finally {
+      clearInterval(ticker);
+      S.strategyLoading = false;
+    }
+  }
+
+  function renderStrategy() {
+    const st = S.strategy;
+    const root = $('#strategy-content');
+    root.innerHTML = '';
+    if (!st) return;
+
+    const section = (title, open = false) => {
+      const d = el('details', 'binder-section');
+      if (open) d.open = true;
+      d.appendChild(el('summary', null, title));
+      root.appendChild(d);
+      return d;
+    };
+    const item = (parent, head, body) => {
+      const n = el('div', 'binder-item');
+      if (head) n.appendChild(el('div', 'bi-head', head));
+      if (body) n.appendChild(el('div', 'bi-body', body));
+      parent.appendChild(n);
+      return n;
+    };
+    const bullets = (xs) => (xs || []).map((x) => '• ' + x).join('\n');
+    const numbered = (xs) => (xs || []).map((x, n) => `${n + 1}. ${x}`).join('\n');
+
+    if (st.fallback) root.appendChild(el('div', 'strategy-status', '⚠️ LIVE PREP UNAVAILABLE — this is a basic sheet built from the case file only.'));
+
+    if ((st.themes || []).length) {
+      const t = section('Case themes — repeat these all trial', true);
+      item(t, null, bullets(st.themes));
+    }
+
+    const op = section('Opening statement plan', true);
+    if ((st.opening?.goals || []).length) item(op, 'What the opening must accomplish', bullets(st.opening.goals));
+    if ((st.opening?.outline || []).length) item(op, 'Beat-by-beat outline', numbered(st.opening.outline));
+    if ((st.opening?.avoid || []).length) item(op, '⚠️ Do NOT', bullets(st.opening.avoid));
+
+    const mine = (st.witnesses || []).filter((w) => w.mine);
+    const theirs = (st.witnesses || []).filter((w) => !w.mine);
+    const witBody = (w) =>
+      `${w.approach}${(w.goals || []).length ? '\nGOALS:\n' + bullets(w.goals) : ''}${(w.questions || []).length ? '\nASK:\n' + numbered(w.questions) : ''}${w.watchOut ? '\n⚠️ ' + w.watchOut : ''}`;
+    if (mine.length) {
+      const d = section(`Your witnesses — direct (${mine.length})`);
+      for (const w of mine) item(d, w.name, witBody(w));
+    }
+    if (theirs.length) {
+      const c = section(`Their witnesses — cross (${theirs.length})`);
+      for (const w of theirs) item(c, w.name, witBody(w));
+    }
+
+    if ((st.evidencePlan || []).length) {
+      const ev = section('Exhibit plan');
+      for (const e of st.evidencePlan) item(ev, e.label, e.use);
+    }
+    if ((st.objectionWatch || []).length) {
+      const ob = section('Objections to have loaded');
+      item(ob, null, bullets(st.objectionWatch));
+    }
+    if ((st.closingSeeds || []).length) {
+      const cl = section('Plant now, harvest in closing');
+      item(cl, null, bullets(st.closingSeeds));
+    }
+  }
 
   function refreshWitnessCallability() {
     const st = S.state;
