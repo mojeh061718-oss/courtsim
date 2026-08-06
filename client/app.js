@@ -291,6 +291,8 @@
     S.strategyLoading = false;
     S.lastSpokenTarget = null;
     S.objectionTarget = null;
+    S.objectionHold = false;
+    S.queuedObjection = null;
     $('#strategy-content').innerHTML = '';
     // Fresh courtroom whether this is a first trial or a restart.
     CourtSpeech.interrupt();
@@ -315,7 +317,7 @@
     for (const ev of events) {
       if (ev.meta?.strikeTargetId) applyStrike(ev.meta.strikeTargetId, ev.meta.strikeParagraph);
       renderEvent(ev);
-      if (ev.speak && !CourtSpeech.muted) {
+      if (ev.speak && !CourtSpeech.muted && !S.objectionHold) {
         const paragraphs = ev.paragraphList && ev.paragraphList.length ? ev.paragraphList : [ev.text];
         const seat = ev.actor === 'juror' ? Number((ev.name.match(/Juror (\d+)/) || [])[1] || 0) : 0;
         CourtSpeech.enqueue({
@@ -822,6 +824,8 @@
 
   async function send(action) {
     if (S.busy) return;
+    // While an objection is before the court, nothing else may address it.
+    if (S.objectionHold && action.type !== 'objection') return;
     S.busy = true;
     const gen = S.gen || 0; // discard the response if the trial is restarted mid-flight
     $('#btn-send').disabled = true;
@@ -837,18 +841,32 @@
     try {
       const r = await api(`/trial/${S.trialId}/action`, { method: 'POST', body: JSON.stringify(action) });
       if ((S.gen || 0) !== gen) return; // trial was restarted while this was in flight
+      if (action.type === 'objection') {
+        // The ruling is in — lift the freeze so the ruling itself is spoken.
+        S.objectionHold = false;
+        S.objectionTarget = null;
+      }
       S.state = r.state;
       saveActive();
       ingestEvents(r.events);
       renderControls();
     } catch (err) {
-      if ((S.gen || 0) === gen) showError(err.message);
+      if ((S.gen || 0) === gen) {
+        if (action.type === 'objection') S.objectionHold = false; // let them re-object
+        showError(err.message);
+      }
     } finally {
       clearInterval(S._workTimer);
       S.busy = false;
       $('#btn-send').disabled = false;
       $('#btn-war-send').disabled = false;
       renderControls();
+      // A queued objection preempts everything the moment the line is free.
+      if (S.queuedObjection && !S.busy && (S.gen || 0) === gen) {
+        const q = S.queuedObjection;
+        S.queuedObjection = null;
+        send(q);
+      }
     }
   }
 
@@ -876,7 +894,11 @@
     if (!rawText) return;
     S.sending = true;
     input.value = ''; // clear NOW so edits during cleanup can't be destroyed
+    $('#btn-send').disabled = true;
+    $('#btn-war-send').disabled = true;
+    const hint = $('#control-hint');
     try {
+      if (window.CourtSettings.cleanup !== false && rawText.length >= 12) hint.textContent = '✍️ Cleaning up your dictation…';
       const text = await cleanDictation(rawText);
       const st = S.state;
       let action = null;
@@ -895,6 +917,10 @@
       await send(action);
     } finally {
       S.sending = false;
+      if (!S.busy) {
+        $('#btn-send').disabled = false;
+        $('#btn-war-send').disabled = false;
+      }
     }
   }
 
@@ -973,10 +999,11 @@
   }
 
   function maybeAutoAdvance() {
-    if (!S.autoAdvance) return;
+    if (!S.autoAdvance || S.objectionHold || S.queuedObjection) return;
     clearTimeout(S._autoTimer);
     S._autoTimer = setTimeout(() => {
       if (!S.autoAdvance || S.busy || !aiHasNext()) return;
+      if (S.objectionHold || S.queuedObjection) return; // an objection owns the floor
       if (modalOpen()) return; // the room waits while counsel is on their feet
       if (CourtSpeech.isSpeaking()) return maybeAutoAdvance();
       // Objection window: give the attorney a beat before the next step lands.
@@ -991,7 +1018,11 @@
   function openObjectionModal() {
     const st = S.state;
     if (!st || st.phase === 'pretrial' || st.phase === 'verdict') return;
-    // Freeze the room: stop speech AND the auto-advance clock exactly here.
+    // HARD INTERRUPT: freeze the room the instant O is pressed. Speech stops,
+    // the auto-advance clock stops, no other action may go out, and anything
+    // already in flight will neither be spoken nor advance the courtroom —
+    // the objection is heard first, pinned to what was on screen right now.
+    S.objectionHold = true;
     clearTimeout(S._autoTimer);
     const at = CourtSpeech.interrupt() || S.lastSpokenTarget;
     S.objectionTarget = at;
@@ -1022,19 +1053,29 @@
   $('#btn-objection').onclick = openObjectionModal;
   $('#btn-objection-cancel').onclick = () => {
     $('#objection-modal').classList.add('hidden');
+    S.objectionHold = false;
+    S.queuedObjection = null;
     maybeAutoAdvance();
   };
   $('#btn-objection-submit').onclick = () => {
     const basis = $('#objection-basis').value;
     const argument = $('#objection-argument').value.trim();
     $('#objection-modal').classList.add('hidden');
-    send({
+    const action = {
       type: 'objection',
       basis,
       argument,
       targetEventId: S.objectionTarget?.eventId,
       paragraphIndex: S.objectionTarget?.paragraphIndex,
-    });
+    };
+    if (S.busy) {
+      // The court is mid-action: the objection preempts — it fires the moment
+      // the in-flight request returns, before anything else can happen.
+      S.queuedObjection = action;
+      $('#control-hint').textContent = '✋ Objection noted — the court will hear it before anything else.';
+    } else {
+      send(action);
+    }
   };
 
   document.addEventListener('keydown', (e) => {
@@ -1047,7 +1088,15 @@
       e.preventDefault();
       openObjectionModal();
     }
-    if (e.key === 'Escape') { $('#objection-modal').classList.add('hidden'); $('#settings-modal').classList.add('hidden'); maybeAutoAdvance(); }
+    if (e.key === 'Escape') {
+      if (!$('#objection-modal').classList.contains('hidden')) {
+        S.objectionHold = false; // withdrawing the objection releases the room
+        S.queuedObjection = null;
+      }
+      $('#objection-modal').classList.add('hidden');
+      $('#settings-modal').classList.add('hidden');
+      maybeAutoAdvance();
+    }
   });
 
   // One-tap binder: opens the Court file (drawer on phones) directly on the
