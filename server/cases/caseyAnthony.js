@@ -26,6 +26,18 @@ export default {
     defense:
       'A little girl drowned in a backyard pool with a ladder she could climb, and a broken family covered it up as it covered up everything else. Casey\'s lies were the survival habit of a young woman shaped by dysfunction — lies after a death are not proof of murder. The State\'s "science" — trunk air chemistry, a hair band, disputed search counts — is novel, contested, and cannot say how Caylee died. No cause of death, no witness, no confession: that is reasonable doubt.',
   },
+  hurdles: {
+    prosecution: [
+      'No cause of death — the medical examiner cannot say how Caylee died, leaving premeditation to inference alone',
+      'The core forensics are contested: novel trunk-air science (Frye risk), a corrected 84-to-1 search count, alerts from a dog no one can cross-examine',
+      'George Anthony and Roy Kronk give the defense ready-made alternative villains the State must defuse without vouching',
+    ],
+    defense: [
+      '31 days of silence, nightclub photos, and the "Bella Vita" tattoo poison every juror\'s sympathy before the science starts',
+      'The trunk evidence converges: hair with death banding, odor witnesses, chloroform findings — all in HER car',
+      'Duct tape and home-linked items at the remains site look like staging, and the drowning theory has zero forensic support',
+    ],
+  },
   charges: [
     {
       id: 'murder_one',

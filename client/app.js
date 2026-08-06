@@ -22,16 +22,36 @@
 
   /* ================= boot ================= */
 
-  async function api(path, opts) {
-    const res = await fetch('/api' + path, {
-      headers: { 'Content-Type': 'application/json' },
-      ...opts,
-    });
-    if (!res.ok) {
-      const e = await res.json().catch(() => ({}));
-      throw new Error(e.error || res.statusText);
+  async function api(path, opts = {}) {
+    // Hard client-side timeout so a stalled call can never wedge the UI.
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs || 300000);
+    try {
+      const res = await fetch('/api' + path, {
+        headers: { 'Content-Type': 'application/json' },
+        signal: ctrl.signal,
+        ...opts,
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || res.statusText);
+      }
+      return res.json();
+    } catch (err) {
+      if (err.name === 'AbortError') throw new Error('The court took too long to respond — tap to try again.');
+      throw err;
+    } finally {
+      clearTimeout(timer);
     }
-    return res.json();
+  }
+
+  function showError(msg) {
+    const line = $('#error-line');
+    if (!line) return alert(msg);
+    line.textContent = '⚠️ ' + msg;
+    line.classList.remove('hidden');
+    clearTimeout(S._errTimer);
+    S._errTimer = setTimeout(() => line.classList.add('hidden'), 8000);
   }
 
   async function boot() {
@@ -75,6 +95,22 @@
     d.appendChild(el('p', null, `Witness roster (${detail.witnesses.length}):`));
     d.appendChild(roster);
     d.appendChild(el('p', null, `Exhibit list: ${detail.evidence.length} items of top relevance.`));
+
+    // What each side must overcome — review BEFORE choosing.
+    const hw = $('#case-hurdles');
+    hw.innerHTML = '';
+    const h = detail.hurdles || {};
+    if ((h.prosecution || []).length || (h.defense || []).length) {
+      hw.appendChild(el('h3', 'hurdles-title', '⚔️ What each side must overcome'));
+      for (const side of ['prosecution', 'defense']) {
+        const card = el('div', `hurdle-card ${side}`);
+        card.appendChild(el('h4', null, side === 'prosecution' ? 'If you take the PROSECUTION' : 'If you take the DEFENSE'));
+        const ul = el('ul');
+        for (const item of h[side] || []) ul.appendChild(el('li', null, item));
+        card.appendChild(ul);
+        hw.appendChild(card);
+      }
+    }
   }
 
   $('#btn-back').onclick = () => {
@@ -307,6 +343,12 @@
     const theory = section('Theory of the case');
     item(theory, `YOUR theory (${mySide})`, b.theories[mySide]);
     item(theory, `Opposing theory (${oppSide})`, b.theories[oppSide]);
+
+    if (b.hurdles && ((b.hurdles[mySide] || []).length || (b.hurdles[oppSide] || []).length)) {
+      const hurdles = section('Things to overcome');
+      item(hurdles, `YOUR hurdles (${mySide})`, (b.hurdles[mySide] || []).map((x) => '• ' + x).join('\n'));
+      item(hurdles, `Their hurdles (${oppSide}) — attack here`, (b.hurdles[oppSide] || []).map((x) => '• ' + x).join('\n'));
+    }
 
     const charges = section('Charges & elements');
     for (const ch of b.charges) {
@@ -560,16 +602,25 @@
     if (S.busy) return;
     S.busy = true;
     $('#btn-send').disabled = true;
+    // Visible heartbeat while the court works — no more silent waits.
+    const hint = $('#control-hint');
+    const t0 = Date.now();
+    clearInterval(S._workTimer);
+    S._workTimer = setInterval(() => {
+      hint.textContent = `⚖️ The court is working… ${Math.round((Date.now() - t0) / 1000)}s`;
+    }, 1000);
     try {
       const r = await api(`/trial/${S.trialId}/action`, { method: 'POST', body: JSON.stringify(action) });
       S.state = r.state;
       ingestEvents(r.events);
       renderControls();
     } catch (err) {
-      alert(err.message);
+      showError(err.message);
     } finally {
+      clearInterval(S._workTimer);
       S.busy = false;
       $('#btn-send').disabled = false;
+      renderControls();
     }
   }
 
@@ -587,7 +638,7 @@
     } else if ((st.phase === 'prosecution_case' || st.phase === 'defense_case') && st.exam?.examinerIsUser) {
       action = { type: 'ask', text };
     }
-    if (!action) return alert('The court is not waiting on text from you right now.');
+    if (!action) return showError('The court is not waiting on text from you right now.');
     input.value = '';
     send(action);
   }
@@ -686,6 +737,13 @@
     }
     if (e.key === 'Escape') $('#objection-modal').classList.add('hidden');
   });
+
+  // One-tap binder: opens the Court file (drawer on phones) directly on the
+  // Binder tab — the courtroom equivalent of flipping open your notes.
+  $('#btn-binder-quick').onclick = () => {
+    document.body.classList.add('drawer-open');
+    document.querySelector('.tab[data-tab="binder"]')?.click();
+  };
 
   $('#btn-transcript').onclick = () => {
     if (S.trialId) window.open(`/api/trial/${S.trialId}/transcript.html`, '_blank');

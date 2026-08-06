@@ -27,6 +27,18 @@ export default {
     defense:
       'Garbage in, garbage out. The LAPD contaminated, mishandled, and in places planted this evidence: an unsealed blood vial with missing blood, a rookie-supervised collection, a detective with a documented racial animus who hopped a wall and "found" the key exhibit, and gloves that do not fit the man accused. If the evidence chain is rotten, the DNA numbers mean nothing. Reasonable doubt is everywhere.',
   },
+  hurdles: {
+    prosecution: [
+      'The messenger problem: Fuhrman\'s perjury about the slurs and the warrantless wall entry let the defense put the LAPD on trial',
+      'Chain-of-custody chaos — an unsealed reference vial, unaccounted blood, gate stains collected weeks late — fuels the planting theory',
+      'The failed glove demonstration is seared into the jury; physical theater beat laboratory numbers once already',
+    ],
+    defense: [
+      'A mountain of mutually corroborating DNA, hair, and fiber from independent laboratories all pointing one direction',
+      'The timeline hole: no alibi from 9:40 to 11 p.m., thumps behind Kato\'s wall, and a figure crossing the driveway',
+      'The domestic-violence history plus rare size-12 Bruno Magli prints make "coincidence" a hard sell',
+    ],
+  },
   charges: [
     {
       id: 'murder_nicole',

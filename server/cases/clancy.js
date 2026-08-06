@@ -32,6 +32,18 @@ export default {
     defense:
       'Lindsay Clancy loved her children and was, on January 24, a woman destroyed by untreated postpartum psychosis and a reckless carousel of thirteen psychiatric drugs. A commanding voice is not a plan; it is a disease. Under Massachusetts law a person who cannot conform her conduct or appreciate wrongfulness is not criminally responsible — she belongs in a hospital, not a prison.',
   },
+  hurdles: {
+    prosecution: [
+      'Once insanity is raised, the Commonwealth must prove sanity beyond a reasonable doubt under McHoul — the hardest burden in the building',
+      'Months of documented psychiatric treatment and a dozen-plus medications corroborate genuine disease, not convenience',
+      'The sheer incomprehensibility of the act invites jurors to conclude no sane mother could have done it',
+    ],
+    defense: [
+      'The planning indicia are chilling: an errand she suggested, a timed window, sequenced acts on three children',
+      'Her post-event statements can be read as awareness of wrongfulness — the exact capacity the defense must negate',
+      'Her providers screened her repeatedly and recorded no psychosis before that night; the jury may see hindsight diagnosis',
+    ],
+  },
   charges: [
     {
       id: 'murder_cora',

@@ -31,6 +31,18 @@ export default {
     defense:
       'A 17-year-old girl does not murder the boyfriend she loved and a friend by driving herself into a wall at 100 mph — she nearly died in that car. The State cannot rule out loss of control, panic, disorientation at dawn, or misapplied pedals. Reckless, perhaps; purposeful murder, never. The State stretches teenage drama into homicidal intent.',
   },
+  hurdles: {
+    prosecution: [
+      'No direct proof of purpose — no note, no confession; the jury may read five fatal seconds as teenage recklessness, not intent to kill',
+      'The defendant was belted and nearly died herself, which cuts against any theory of a planned act',
+      'The "crash the car" statements are remote, ambiguous venting from teenagers — vulnerable to exclusion and easy for the defense to reframe',
+    ],
+    defense: [
+      'The EDR physics are brutal: 98-100% throttle held five full seconds, no braking, no swerve, no mechanical defect, dry road',
+      'The volatile texts and prior high-speed incident hand the State a ready-made motive-and-pattern narrative',
+      'Every innocent explanation (medical episode, pedal error, microsleep) lacks affirmative proof and was undercut by her own workup',
+    ],
+  },
   charges: [
     {
       id: 'murder_russo',

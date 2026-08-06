@@ -71,6 +71,7 @@ Return ONLY this JSON shape (all fields required):
   "blurb": "<2 sentence hook>",
   "factSummary": "<300-450 words: the neutral investigative record — what happened, what was found, what each side contends. This is the factual universe for the whole trial.>",
   "theories": { "prosecution": "<3-4 sentence theory>", "defense": "<3-4 sentence theory>" },
+  "hurdles": { "prosecution": ["<3 hard problems the prosecution must overcome, each one punchy sentence>"], "defense": ["<3 for the defense>"] },
   "parties": {
     "defendant": "<name, age, one-phrase description>",
     "victims": ["<name, age, relationship>"],
@@ -168,6 +169,10 @@ function normalize(raw, theme, level) {
     theories: {
       prosecution: str(c.theories?.prosecution, 'The defendant committed the murder.'),
       defense: str(c.theories?.defense, 'The State cannot prove it.'),
+    },
+    hurdles: {
+      prosecution: arr(c.hurdles?.prosecution).map(String).slice(0, 4),
+      defense: arr(c.hurdles?.defense).map(String).slice(0, 4),
     },
     charges,
     juryInstructions: str(c.juryInstructions, 'The defendant is presumed innocent; the State must prove every element beyond a reasonable doubt.'),
