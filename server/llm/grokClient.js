@@ -86,61 +86,63 @@ export async function chat(messages, opts = {}) {
   const timeoutMs = opts.timeoutMs || DEFAULTS.timeoutMs;
   const attempts = opts.attempts || 2;
 
-  // Cross-provider failover: if the preferred endpoint stalls (e.g. Bedrock's
-  // new-account throughput ramp), retry the SAME call on the other provider
-  // before surrendering to the offline mock. Order: preferred, then the other
-  // one if its key is configured.
+  // Hedged dispatch: fire the preferred lane; if it hasn't answered within
+  // hedgeDelayMs, fire the other lane in parallel and take whichever succeeds
+  // first. A slow or dead endpoint can never stall a call past the hedge delay
+  // plus the healthy lane's own latency.
   const primary = prov || PROVIDER;
-  const lanes = [{ baseUrl, model, apiKey, provider: primary }];
   const other = primary === 'bedrock' ? 'xai' : 'bedrock';
   const otherKey = other === 'xai' ? NATIVE_KEY : process.env.AWS_BEARER_TOKEN_BEDROCK;
-  if (otherKey && !opts.noFailover) {
-    lanes.push({ baseUrl: PRESETS[other].baseUrl, model: PRESETS[other].model, apiKey: otherKey, provider: other });
-  }
+  const hedgeDelayMs = opts.hedgeDelayMs || 8000;
 
-  let lastErr;
-  for (const lane of lanes) {
-    const body = {
-      model: lane.model,
-      messages,
-      temperature,
-    };
+  const laneCall = async (laneProv, laneKey, laneTimeout) => {
+    const body = { model: PRESETS[laneProv].model, messages, temperature };
+    if (!prov && laneProv === PROVIDER) body.model = DEFAULTS.model;
     if (json) body.response_format = { type: 'json_object' };
-    // Grok 4.3's always-on reasoning can be dialed down per call (opts.effort:
-    // 'none'|'low'|'medium'|'high') — big latency win for creative/mechanical
-    // calls. Verified on bedrock-mantle; guarded there to avoid rejects elsewhere.
-    if (opts.effort && lane.provider === 'bedrock') body.reasoning_effort = opts.effort;
-
-    for (let attempt = 0; attempt < attempts; attempt++) {
-      try {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-        const res = await fetch(`${lane.baseUrl}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${lane.apiKey}`,
-          },
-          body: JSON.stringify(body),
-          signal: ctrl.signal,
-        });
-        clearTimeout(timer);
-        if (!res.ok) {
-          const text = await res.text().catch(() => '');
-          throw new Error(`${lane.provider} API ${res.status}: ${text.slice(0, 300)}`);
-        }
-        const data = await res.json();
-        const content = data.choices?.[0]?.message?.content ?? '';
-        return json ? parseJsonLoose(content, mock) : content;
-      } catch (err) {
-        lastErr = err;
-        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
+    if (opts.effort && laneProv === 'bedrock') body.reasoning_effort = opts.effort;
+    const laneUrl = !prov && laneProv === PROVIDER ? DEFAULTS.baseUrl : PRESETS[laneProv].baseUrl;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), laneTimeout);
+    try {
+      const res = await fetch(`${laneUrl}/chat/completions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${laneKey}` },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+      if (!res.ok) throw new Error(`${laneProv} API ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`);
+      const data = await res.json();
+      const content = data.choices?.[0]?.message?.content ?? '';
+      if (json) {
+        const parsed = parseJsonLoose(content, null);
+        if (parsed == null) throw new Error(`${laneProv} returned unparseable JSON`);
+        return parsed;
       }
+      return content;
+    } finally {
+      clearTimeout(timer);
     }
-    console.error(`[grok] ${lane.provider} lane exhausted:`, lastErr?.message, '- trying next lane');
+  };
+
+  const swallow = (p) => { p.catch(() => {}); return p; };
+  try {
+    const p1 = swallow(laneCall(primary, apiKey, timeoutMs));
+    if (!otherKey || opts.noFailover) return await p1;
+
+    // Wait up to hedgeDelayMs for the primary; on timeout OR early failure,
+    // launch the hedge and take the first lane that succeeds.
+    const first = await Promise.race([
+      p1.then((v) => ({ ok: true, v }), () => ({ ok: false })),
+      new Promise((r) => setTimeout(() => r('HEDGE'), hedgeDelayMs)),
+    ]);
+    if (first !== 'HEDGE' && first.ok) return first.v;
+
+    const p2 = swallow(laneCall(other, otherKey, timeoutMs));
+    return await Promise.any([p1, p2]);
+  } catch (err) {
+    console.error('[grok] both lanes failed, using offline fallback:', err?.errors?.map((e) => e.message).join(' | ') || err?.message);
+    return mock ? mock() : null;
   }
-  console.error('[grok] all lanes failed, using offline fallback:', lastErr?.message);
-  return mock ? mock() : null;
 }
 
 /**

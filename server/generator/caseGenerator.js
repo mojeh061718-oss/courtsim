@@ -43,7 +43,7 @@ export async function generateCase({ theme, difficulty }) {
     // Route to the native API (faster, no new-account throughput ramp) with a
     // generous timeout — this is the app's single longest-output call. effort
     // 'none' applies automatically if it lands on Bedrock instead.
-    { json: true, temperature: 0.9, effort: 'none', provider: 'xai', timeoutMs: 240000, attempts: 2, mock: () => ({ ...mockCase(theme, level), __mock: true }) }
+    { json: true, temperature: 0.9, effort: 'none', provider: 'xai', timeoutMs: 240000, hedgeDelayMs: 60000, mock: () => ({ ...mockCase(theme, level), __mock: true }) }
   );
   const caseFile = normalize(raw, theme, level);
   caseFile.fallback = Boolean(raw && raw.__mock);
