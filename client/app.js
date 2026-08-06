@@ -62,6 +62,7 @@
     const detail = await api('/cases/' + caseId);
     S.selectedCase = detail;
     $('#case-list').classList.add('hidden');
+    $('#generator').classList.add('hidden');
     $('#side-picker').classList.remove('hidden');
     $('#side-case-title').textContent = detail.title;
     $('#side-case-blurb').textContent = detail.blurb;
@@ -79,12 +80,62 @@
   $('#btn-back').onclick = () => {
     $('#side-picker').classList.add('hidden');
     $('#case-list').classList.remove('hidden');
+    $('#generator').classList.remove('hidden');
   };
   $('#btn-prosecution').onclick = () => startTrial('prosecution');
   $('#btn-defense').onclick = () => startTrial('defense');
 
+  /* ================= difficulty & case generator ================= */
+
+  function diffLabel(l) {
+    if (l <= 2) return 'Training wheels';
+    if (l <= 4) return 'Competent opponent';
+    if (l <= 6) return 'Seasoned litigator';
+    if (l <= 8) return 'Veteran first chair';
+    return 'Dream Team';
+  }
+  function bindSlider(rangeSel, valSel, labelSel) {
+    const r = $(rangeSel);
+    const update = () => {
+      $(valSel).textContent = r.value;
+      $(labelSel).textContent = diffLabel(Number(r.value));
+    };
+    r.oninput = update;
+    update();
+    return r;
+  }
+  bindSlider('#gen-difficulty', '#gen-diff-val', '#gen-diff-label');
+  bindSlider('#side-difficulty', '#side-diff-val', '#side-diff-label');
+
+  $('#btn-generate').onclick = async () => {
+    const btn = $('#btn-generate');
+    const status = $('#gen-status');
+    btn.disabled = true;
+    status.textContent = 'Drafting the case file — witnesses, exhibits, jurors… (up to a minute)';
+    try {
+      const r = await api('/generate-case', {
+        method: 'POST',
+        body: JSON.stringify({ theme: $('#gen-theme').value.trim(), difficulty: Number($('#gen-difficulty').value) }),
+      });
+      status.textContent = '';
+      const { cases } = await api('/cases');
+      S.cases = cases;
+      renderCaseList();
+      await showSidePicker(r.id);
+      $('#side-difficulty').value = String(r.difficulty);
+      $('#side-difficulty').dispatchEvent(new Event('input'));
+    } catch (err) {
+      status.textContent = 'Generation failed: ' + err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  };
+
   async function startTrial(side) {
-    const r = await api('/trial', { method: 'POST', body: JSON.stringify({ caseId: S.selectedCase.id, side }) });
+    const r = await api('/trial', {
+      method: 'POST',
+      body: JSON.stringify({ caseId: S.selectedCase.id, side, difficulty: Number($('#side-difficulty').value) }),
+    });
     S.trialId = r.trialId;
     S.state = r.state;
     S.pretrialDone = false;
@@ -278,7 +329,7 @@
     const st = S.state;
     if (!st) return;
     $('#hdr-phase').textContent = st.phase.replace(/_/g, ' ');
-    $('#hdr-side').textContent = `You: ${st.userSide}`;
+    $('#hdr-side').textContent = `You: ${st.userSide} · D${st.difficulty} ${st.difficultyLabel || ''}`;
     const sc = st.score;
     $('#hdr-score').textContent = `Obj ${sc.userObjections.sustained}✓/${sc.userObjections.overruled}✗ · Against you ${sc.aiObjections.sustained} · Admonished ${sc.admonishments}`;
 

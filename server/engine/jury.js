@@ -7,6 +7,7 @@
 import { chat } from '../llm/grokClient.js';
 import { jurorSystem, jurorDeliberationTask } from '../agents/prompts.js';
 import { hash01, CONFIG } from './util.js';
+import { profile } from './difficulty.js';
 
 export function seatJury(caseFile) {
   return caseFile.jurorPool.slice(0, CONFIG.jurySize).map((j) => ({ ...j }));
@@ -31,7 +32,7 @@ export async function runDeliberationRound(state, caseFile, jurorFacingRecord) {
     const priorTalk = delib.log
       .map((m) => `Juror ${m.seat} (${m.name}): ${m.statement}`)
       .join('\n');
-    const sys = jurorSystem({ caseFile, juror, aliasNote });
+    const sys = jurorSystem({ caseFile, juror, aliasNote, difficulty: profile(state.difficulty).juror });
     const task = jurorDeliberationTask({ charges: caseFile.charges, roundNo, isFirst });
     const user = `THE TRIAL RECORD (everything you are permitted to consider):\n${jurorFacingRecord}\n\nTHE COURT'S INSTRUCTIONS:\n${caseFile.juryInstructions}\n\nDELIBERATION SO FAR:\n${priorTalk || '(You are the first to speak.)'}\n\n${task}`;
 

@@ -43,6 +43,24 @@ button, .btn, .tab, .docket-item, textarea, select { touch-action: manipulation;
 .select-header { text-align: center; padding: 48px 16px 12px; }
 .select-header h1 { font-size: 2.6rem; letter-spacing: 0.18em; margin: 0; color: var(--brass); }
 .tagline { max-width: 720px; margin: 12px auto; color: var(--ink-dim); }
+.generator-panel {
+  max-width: 860px; margin: 0 auto 8px; width: calc(100% - 48px);
+  background: var(--panel); border: 1px solid var(--brass); border-radius: var(--radius);
+  padding: 16px 18px;
+}
+.generator-panel h3 { margin: 0 0 10px; color: var(--brass); font-size: 1rem; letter-spacing: 0.04em; }
+.gen-row { margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px; }
+.gen-row input[type="text"] {
+  background: var(--panel-2); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 8px; padding: 10px; font-family: inherit; font-size: 16px;
+}
+.gen-label { font-size: 0.85rem; color: var(--ink-dim); }
+.gen-label span { color: var(--brass); }
+input[type="range"] { accent-color: var(--brass); width: 100%; }
+.gen-status { color: var(--ink-dim); font-size: 0.85rem; }
+.generator-panel .gen-row:last-child { flex-direction: row; align-items: center; gap: 12px; margin-bottom: 0; }
+.side-difficulty { margin: 14px 0 4px; }
+
 .case-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px; padding: 24px; max-width: 1280px; margin: 0 auto; width: 100%;

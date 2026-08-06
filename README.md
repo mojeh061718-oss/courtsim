@@ -14,6 +14,15 @@ deliberating AI jury** that decides only on the record you build.
   - *State of Florida v. Casey Anthony*
   - *Commonwealth of Massachusetts v. Lindsay Clancy* (ongoing — refreshable via live research)
   - *People v. O.J. Simpson*
+- **Generate new murder trials with a difficulty slider.** One button drafts a complete
+  fictional case — contested fact pattern, charges with lessers, 8-10 witnesses with
+  private knowledge, exhibits, pretrial motions, an original 12-juror pool — themed to
+  your prompt if you give one (`POST /api/generate-case {theme, difficulty}`). The
+  1-10 difficulty shapes how contested the facts are at generation AND calibrates every
+  courtroom actor at trial: opposing counsel's objection discipline and cross skill, the
+  judge's strictness, and how exacting the jurors are about burden and elements. The
+  same slider applies to the four real cases (D1-2 "Training wheels" → D9-10 "Dream
+  Team").
 - **Full trial arc.** Exclusionary pretrial motions → opening statements → prosecution and
   defense cases-in-chief (direct & cross of witnesses/experts) → closing arguments → jury
   instructions → deliberation → verdict.

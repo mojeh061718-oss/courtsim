@@ -24,16 +24,18 @@ import {
 import { basisById } from './objections.js';
 import { seatJury, runDeliberationRound, tallyVotes } from './jury.js';
 import { nextId, hash01, clampTail, sentences, CONFIG } from './util.js';
+import { profile, maxQuestionsFor, clampLevel, difficultyLabel } from './difficulty.js';
 
 /* ============================== state ============================== */
 
-export function createTrial(caseFile, userSide) {
+export function createTrial(caseFile, userSide, difficulty) {
   const aiSide = userSide === 'prosecution' ? 'defense' : 'prosecution';
   const state = {
     id: nextId('trial'),
     caseId: caseFile.id,
     userSide,
     aiSide,
+    difficulty: clampLevel(difficulty ?? caseFile.difficulty ?? 5),
     phase: 'pretrial',
     openingTurn: 'prosecution',
     closingTurn: 'prosecution',
@@ -88,6 +90,10 @@ export async function handleAction(state, caseFile, action) {
     push(events, state, sys('system', `The court reporter lost that one (${err.message}). Please try again.`, { speak: false }));
   }
   return { events, state: publicState(state, caseFile) };
+}
+
+function diff(state) {
+  return profile(state.difficulty);
 }
 
 /* ============================== pretrial ============================== */
@@ -149,7 +155,7 @@ async function judgeMotionRuling(state, caseFile, { movant, text, response }) {
   const transcript = transcriptText(state);
   return await chat(
     [
-      { role: 'system', content: judgeSystem({ caseFile }) },
+      { role: 'system', content: judgeSystem({ caseFile, difficulty: diff(state).judge }) },
       { role: 'user', content: `RECORD SO FAR:\n${transcript}\n\nPENDING MOTION by the ${movant}:\n"${text}"\n\nOPPOSITION/RESPONSE:\n"${response}"\n\n${judgeMotionTask()}` },
     ],
     {
@@ -427,7 +433,7 @@ async function advanceEvidence(state, caseFile, events) {
       return;
     }
     const out = await aiNextQuestion(state, caseFile, w);
-    if (out.pass || exam.qCount >= CONFIG.maxAiQuestions) {
+    if (out.pass || exam.qCount >= maxQuestionsFor(state.difficulty, CONFIG.maxAiQuestions)) {
       if (exam.stage === 'direct') {
         exam.stage = 'cross';
         exam.qCount = 0;
@@ -477,7 +483,7 @@ async function aiNextQuestion(state, caseFile, w) {
   const examTranscript = examinationText(state, caseFile);
   return await chat(
     [
-      { role: 'system', content: counselSystem({ caseFile, side: state.aiSide, phaseLabel: `${state.exam.stage} examination of ${w.name}` }) },
+      { role: 'system', content: counselSystem({ caseFile, side: state.aiSide, phaseLabel: `${state.exam.stage} examination of ${w.name}`, difficulty: diff(state).counsel }) },
       { role: 'user', content: `WITNESS: ${w.name} — ${w.description}.\nWhat this witness can speak to (from the case file): ${w.knowledge}\n\nEXAMINATION SO FAR:\n${examTranscript || '(none yet)'}\n\nYou are conducting ${isDirect ? 'DIRECT examination (open-ended, no leading)' : 'CROSS examination (short, leading, one fact per question)'}. Ask your single next question, or pass the witness if you have what you need.\nRespond with ONLY JSON: {"question": "<the question>"} or {"pass": true}` },
     ],
     {
@@ -500,7 +506,7 @@ async function aiStatement(state, caseFile, kindLabel) {
   const transcript = transcriptText(state);
   return await chat(
     [
-      { role: 'system', content: counselSystem({ caseFile, side: state.aiSide, phaseLabel: kindLabel }) },
+      { role: 'system', content: counselSystem({ caseFile, side: state.aiSide, phaseLabel: kindLabel, difficulty: diff(state).counsel }) },
       { role: 'user', content: `RECORD SO FAR:\n${transcript}\n\nStanding exclusions you must honor:\n${state.exclusions.map((e) => `- ${e}`).join('\n') || '- none'}\n\nDeliver your ${kindLabel} to the jury now. 4-7 short paragraphs, spoken prose, separated by blank lines. ${kindLabel === 'opening statement' ? 'Preview the evidence; do not argue.' : 'Argue the evidence against the elements; end with a clear ask.'}` },
     ],
     {
@@ -567,7 +573,7 @@ async function judgeObjectionRuling(state, caseFile, { objector, basis, argument
   const transcript = transcriptText(state);
   return await chat(
     [
-      { role: 'system', content: judgeSystem({ caseFile }) },
+      { role: 'system', content: judgeSystem({ caseFile, difficulty: diff(state).judge }) },
       { role: 'user', content: `RECORD (recent):\n${transcript}\n\nTHE CHALLENGED MATERIAL (offered by the ${otherSideName(state, objector)}): "${targetText}"\nOBJECTION by the ${objector}: ${basis.label} — ${basis.desc}\nObjector's argument: "${argument || '(none)'}"\nProponent's reply: "${reply || '(none)'}"\n\n${judgeRulingTask({ pretrialExclusions: state.exclusions })}` },
     ],
     {
@@ -611,7 +617,7 @@ async function counselReview(state, caseFile, text, contextLabel) {
   const transcript = transcriptText(state);
   return await chat(
     [
-      { role: 'system', content: counselReviewSystem({ caseFile, side: state.aiSide }) },
+      { role: 'system', content: counselReviewSystem({ caseFile, side: state.aiSide, difficulty: diff(state).counsel }) },
       { role: 'user', content: `RECORD (recent):\n${transcript}\n\nStanding exclusions ordered by the court:\n${state.exclusions.map((e) => `- ${e}`).join('\n') || '- none'}\n\nOpposing counsel's submission (${contextLabel}), which the jury has NOT yet heard:\n"${text}"\n\nDecide per your task instructions.` },
     ],
     {
@@ -638,7 +644,7 @@ async function judgeScreen(state, caseFile, text) {
   }
   return await chat(
     [
-      { role: 'system', content: judgeSystem({ caseFile }) },
+      { role: 'system', content: judgeSystem({ caseFile, difficulty: diff(state).judge }) },
       { role: 'user', content: `A party is about to present this to the jury:\n"${text}"\n\n${judgeScreenTask({ pretrialExclusions: state.exclusions })}` },
     ],
     {
@@ -664,7 +670,7 @@ async function judgeScreen(state, caseFile, text) {
 async function counselFreeText(state, caseFile, side, task, mock) {
   return await chat(
     [
-      { role: 'system', content: counselSystem({ caseFile, side, phaseLabel: state.phase }) },
+      { role: 'system', content: counselSystem({ caseFile, side, phaseLabel: state.phase, difficulty: diff(state).counsel }) },
       { role: 'user', content: `RECORD (recent):\n${transcriptText(state)}\n\n${task}` },
     ],
     { temperature: 0.6, mock }
@@ -704,7 +710,7 @@ async function deliverVerdict(state, caseFile, events) {
 
   const review = await chat(
     [
-      { role: 'system', content: judgeSystem({ caseFile }) },
+      { role: 'system', content: judgeSystem({ caseFile, difficulty: diff(state).judge }) },
       { role: 'user', content: `FULL RECORD:\n${transcriptText(state, 14000)}\n\n${performanceReviewTask({ side: state.userSide, score: state.score })}` },
     ],
     {
@@ -823,6 +829,8 @@ export function publicState(state, caseFile) {
     caseId: state.caseId,
     userSide: state.userSide,
     aiSide: state.aiSide,
+    difficulty: state.difficulty,
+    difficultyLabel: difficultyLabel(state.difficulty),
     phase: state.phase,
     openingTurn: state.openingTurn,
     closingTurn: state.closingTurn,

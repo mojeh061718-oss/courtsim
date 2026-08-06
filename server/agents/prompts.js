@@ -14,7 +14,7 @@ GROUND RULES (all courtroom actors):
   reading a document into the record. Plain spoken English, courtroom register.
 - Keep spoken turns tight. Court time is expensive.`;
 
-export function counselSystem({ caseFile, side, phaseLabel }) {
+export function counselSystem({ caseFile, side, phaseLabel, difficulty }) {
   const p = caseFile.parties;
   const theory = side === 'prosecution' ? caseFile.theories.prosecution : caseFile.theories.defense;
   return `You are ${counselName(caseFile, side)}, ${side} counsel in ${caseFile.title}.
@@ -42,11 +42,11 @@ HOW TO ARGUE (your standing instructions):
    harm matters. Over-objecting annoys the jury; choose your moments.
 7. Openings: preview the evidence, no argument. Closings: argue inferences, tie evidence to each
    element (or to reasonable doubt), deliver a clear ask.
-Current phase: ${phaseLabel}.`;
+${difficulty ? `\nSKILL CALIBRATION FOR THIS SESSION:\n${difficulty}\n` : ''}Current phase: ${phaseLabel}.`;
 }
 
-export function counselReviewSystem({ caseFile, side }) {
-  return `${counselSystem({ caseFile, side, phaseLabel: 'reviewing opposing counsel submission' })}
+export function counselReviewSystem({ caseFile, side, difficulty }) {
+  return `${counselSystem({ caseFile, side, phaseLabel: 'reviewing opposing counsel submission', difficulty })}
 
 TASK: Opposing counsel has just made a submission (statement, question, or argument). The jury
 has NOT yet heard it. Decide whether to object before it reaches the jury.
@@ -60,7 +60,7 @@ Object only on a genuine, articulable basis. If the submission is proper — eve
 your case — respond {"object": false, "basis": null, "argument": null}.`;
 }
 
-export function judgeSystem({ caseFile }) {
+export function judgeSystem({ caseFile, difficulty }) {
   return `You are the Honorable ${caseFile.parties.judge}, presiding over ${caseFile.title}.
 ${COURT_GROUND_RULES}
 
@@ -79,7 +79,7 @@ YOUR JUDICIAL DUTIES:
    accountability is the point of this exercise.
 
 APPROVED OBJECTION BASES (the governing standard):
-${basesForPrompt()}`;
+${basesForPrompt()}${difficulty ? `\n\nCOURTROOM CALIBRATION FOR THIS SESSION:\n${difficulty}` : ''}`;
 }
 
 export function judgeRulingTask({ pretrialExclusions }) {
@@ -133,7 +133,7 @@ TESTIMONY RULES:
    knowledge when directly confronted — you are under oath.`;
 }
 
-export function jurorSystem({ caseFile, juror, aliasNote }) {
+export function jurorSystem({ caseFile, juror, aliasNote, difficulty }) {
   return `You are Juror ${juror.seat}: ${juror.name}, ${juror.age}, ${juror.occupation}. ${juror.background}
 Disposition: ${juror.disposition}
 ${COURT_GROUND_RULES}
@@ -150,7 +150,7 @@ JUROR BLINDNESS — ABSOLUTE:
   prosecution alone. But you are not a pushover — you form genuine opinions from the evidence
   and you say what you actually think.
 - Your personality, life experience, and disposition above should color HOW you reason and speak,
-  never substitute for the evidence.`;
+  never substitute for the evidence.${difficulty ? `\n- CALIBRATION FOR THIS SESSION: ${difficulty}` : ''}`;
 }
 
 export function jurorDeliberationTask({ charges, roundNo, isFirst }) {

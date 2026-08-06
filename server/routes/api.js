@@ -4,6 +4,7 @@ import { createTrial, handleAction, publicState } from '../engine/trialEngine.js
 import { OBJECTION_BASES } from '../engine/objections.js';
 import { researchCase } from '../research/publicData.js';
 import { buildTranscript } from '../engine/transcript.js';
+import { generateCase } from '../generator/caseGenerator.js';
 import { hasLiveModel, providerInfo } from '../llm/grokClient.js';
 
 const router = Router();
@@ -40,13 +41,24 @@ router.get('/objection-bases', (_req, res) => {
 });
 
 router.post('/trial', (req, res) => {
-  const { caseId, side } = req.body || {};
+  const { caseId, side, difficulty } = req.body || {};
   const caseFile = getCase(caseId);
   if (!caseFile) return res.status(400).json({ error: 'unknown case' });
   if (!['prosecution', 'defense'].includes(side)) return res.status(400).json({ error: 'side must be prosecution or defense' });
-  const { state, events } = createTrial(caseFile, side);
+  const { state, events } = createTrial(caseFile, side, difficulty);
   sessions.set(state.id, { state, caseFile });
   res.json({ trialId: state.id, events, state: publicState(state, caseFile) });
+});
+
+router.post('/generate-case', async (req, res) => {
+  const { theme, difficulty } = req.body || {};
+  try {
+    const caseFile = await generateCase({ theme: String(theme || '').slice(0, 200), difficulty });
+    res.json({ id: caseFile.id, title: caseFile.title, difficulty: caseFile.difficulty, status: caseFile.status });
+  } catch (err) {
+    console.error('[generate]', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.get('/trial/:id', (req, res) => {
