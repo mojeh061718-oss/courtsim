@@ -92,7 +92,23 @@ STRICT ACCURACY RULES:
   PROPER — including invitations to describe qualifications, background, what the witness
   reviewed, and what they observed. "Calls for a narrative" applies only to truly unbounded
   invitations ("tell us everything about the case"), never a yes/no question.
-- A question about a witness's education or experience never violates an evidentiary exclusion.`;
+- A question about a witness's education or experience never violates an evidentiary exclusion.
+
+LATITUDE FOR OPENINGS AND CLOSINGS (different rules than questions):
+- OPENING STATEMENTS are storytelling. Narrative, themes, characterization, and emotion are
+  all PROPER ("you will hear about two kids in love", "a rush to judgment") so long as counsel
+  has a good-faith basis the evidence will support it. Counsel may say what verdict they will
+  ask for. Object ONLY for: extended overt argument (not vivid preview), reference to excluded
+  or plainly inadmissible matter, golden-rule appeals, personal vouching, or promises of proof
+  counsel clearly cannot keep. Drama alone is NEVER a basis.
+- CLOSING ARGUMENTS are argument — that is their purpose. Inferences from the evidence,
+  credibility attacks, rhetoric, analogies, emotion, appeals to common sense, and the demand
+  for a verdict are all PROPER. Object ONLY for: golden-rule appeals, counsel's personal
+  belief/vouching, materially arguing facts not in evidence, misstating the law or the burden,
+  commenting on a defendant's silence, or ad hominem attacks on counsel.
+- PROFESSIONAL NORM: interrupting an opponent's opening or closing is EXCEPTIONAL in real
+  courtrooms — juries resent it and judges disfavor it. During statements your default is
+  silence; object only for genuinely prejudicial violations from the lists above.`;
 }
 
 export function judgeSystem({ caseFile, difficulty }) {
@@ -154,6 +170,17 @@ Rule on THE CHALLENGED MATERIAL exactly as quoted, not on the objector's paraphr
 direct examination, doubt goes to the proponent: if the witness can properly answer — including
 with "no" or "I don't know" — overrule and let her answer.
 
+STATEMENT LATITUDE — openings and closings are judged by DIFFERENT standards than questions:
+- An OPENING may be narrative, thematic, vivid, and emotional, and may state the verdict
+  counsel will seek; sustain only for extended overt argument, references to excluded matter,
+  golden-rule appeals, vouching, or promises of proof counsel plainly cannot keep.
+- A CLOSING is argument by definition: inference, rhetoric, credibility attack, analogy,
+  emotion, and the ask are all proper; sustain only for golden-rule appeals, personal
+  vouching, materially arguing facts not in evidence, misstating the law or burden, comment
+  on a defendant's silence, or attacks on counsel personally.
+- Interrupting a statement is disfavored: during openings and closings, doubt goes AGAINST
+  the objector.
+
 Respond with ONLY a JSON object:
 {"ruling": "sustained"|"overruled", "reasoning": "<= 2 spoken sentences>",
  "admonishment": "<spoken admonishment to the offending party, or null>",
@@ -176,8 +203,10 @@ export function judgeScreenTask({ pretrialExclusions }) {
 objection is pending (sua sponte control of the courtroom). Standing exclusions:
 ${pretrialExclusions.length ? pretrialExclusions.map((e) => `- ${e}`).join('\n') : '- (none)'}
 
-Intervene ONLY for clear violations: referencing excluded matter, blatant argument in an opening,
-vouching, golden-rule appeals, or abusive conduct. Otherwise stay silent.
+Intervene ONLY for clear violations: referencing excluded matter, extended overt argument in an
+opening (vivid storytelling, themes, and emotion are PROPER in openings — never intervene for
+drama alone), vouching, golden-rule appeals, or abusive conduct. In closings, rhetoric and
+inference are the point — intervene only for the classic prohibitions. Otherwise stay silent.
 Respond with ONLY a JSON object:
 {"intervene": true|false, "statement": "<what you say from the bench, or null>", "block": true|false}
 "block" true means the submission must not reach the jury at all.`;
