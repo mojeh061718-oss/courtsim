@@ -506,7 +506,21 @@ async function advanceEvidence(state, caseFile, events) {
       concludeCasePhase(state, caseFile, events);
       return;
     }
-    const w = roster[0];
+    // Strategic order of proof: the AI chooses its next witness (or rests)
+    // from what the record still needs, not from case-file order.
+    const pick = await chat(
+      [
+        { role: 'system', content: counselSystem({ caseFile, side: state.aiSide, phaseLabel: 'planning the order of proof in your case-in-chief', difficulty: diff(state).counsel }) },
+        { role: 'user', content: `RECORD SO FAR:\n${transcriptText(state)}\n\nWitnesses you have already called: ${state.aiWitnessesCalled.length ? state.aiWitnessesCalled.join(', ') : '(none)'}\nYou may call up to ${CONFIG.maxAiWitnesses} witnesses total.\n\nREMAINING ROSTER:\n${roster.map((r) => `- id "${r.id}": ${r.name} — ${r.description}`).join('\n')}\n\nChoose your next witness for maximum persuasive effect given what the jury has heard, or rest if your remaining witnesses add nothing your case still needs.\nRespond with ONLY JSON: {"witnessId": "<id from the roster>"} or {"rest": true}` },
+      ],
+      { json: true, temperature: 0.4, effort: 'none', hedgeDelayMs: 3500, mock: () => ({ witnessId: roster[0].id }) }
+    ).catch(() => ({ witnessId: roster[0].id }));
+    if (pick?.rest && state.aiWitnessesCalled.length > 0) {
+      push(events, state, counselEv(state, caseFile, `Your Honor, the ${state.aiSide} rests.`, 'statement'));
+      concludeCasePhase(state, caseFile, events);
+      return;
+    }
+    const w = roster.find((r) => r.id === pick?.witnessId) || roster[0];
     state.aiWitnessesCalled.push(w.id);
     state.exam = { witnessId: w.id, calledBy: state.aiSide, stage: 'direct', pendingQuestion: null, qCount: 0, startIdx: state.record.length };
     push(events, state, counselEv(state, caseFile, `The ${state.aiSide} calls ${w.name}.`, 'statement'));
@@ -524,7 +538,9 @@ async function aiNextQuestion(state, caseFile, w) {
   return await chat(
     [
       { role: 'system', content: counselSystem({ caseFile, side: state.aiSide, phaseLabel: `${state.exam.stage} examination of ${w.name}`, difficulty: diff(state).counsel }) },
-      { role: 'user', content: `WITNESS: ${w.name} — ${w.description}.\nWhat this witness can speak to (from the case file): ${w.knowledge}\n\nEXAMINATION SO FAR:\n${examTranscript || '(none yet)'}\n\nYou are conducting ${isDirect ? 'DIRECT examination (open-ended, no leading)' : 'CROSS examination (short, leading, one fact per question)'}. Ask your single next question, or pass the witness if you have what you need.\nRespond with ONLY JSON: {"question": "<the question>"} or {"pass": true}` },
+      { role: 'user', content: `WITNESS: ${w.name} — ${w.description}.\nWhat this witness can speak to (from the case file): ${w.knowledge}\n\nEXAMINATION SO FAR (${state.exam.qCount} question${state.exam.qCount === 1 ? '' : 's'} asked):\n${examTranscript || '(none yet)'}\n\nYou are conducting ${isDirect
+        ? 'DIRECT examination (open-ended, no leading). Run a COMPLETE, true-to-life direct: establish who the witness is and their role, lay foundation, then walk them through their knowledge in logical sequence — scene, observations, times, exhibits, and the specifics a real jury needs. One question per turn, each building on the last answer. Do NOT pass while material areas of this witness\'s knowledge remain unexplored; pass ONLY when their story is fully before the jury and further questions would merely repeat.'
+        : 'CROSS examination (short, leading, one fact per question). Be purposeful: attack what damaged you, extract the concessions this witness must give, then stop — a pointed cross beats a long one. Pass when your objectives are met.'}\nAsk your single next question.\nRespond with ONLY JSON: {"question": "<the question>"} or {"pass": true}` },
     ],
     {
       json: true,
@@ -532,7 +548,7 @@ async function aiNextQuestion(state, caseFile, w) {
       effort: 'none', hedgeDelayMs: 3500,
       mock: () => {
         const n = state.exam.qCount;
-        if (n >= 3) return { pass: true };
+        if (n >= 8) return { pass: true };
         const s = sentences(w.knowledge);
         const topic = s[n % s.length] || w.description;
         return isDirect
