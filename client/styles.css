@@ -366,9 +366,24 @@ input[type="range"] { accent-color: var(--brass); width: 100%; }
 .verdict-banner {
   position: fixed; left: 50%; transform: translateX(-50%); bottom: 24px; z-index: 40;
   background: #241f15; border: 2px solid var(--brass); border-radius: 12px;
-  padding: 16px 22px; max-width: 720px; box-shadow: 0 8px 40px #000c;
+  padding: 16px 22px; max-width: 720px; width: calc(100% - 28px); box-sizing: border-box;
+  max-height: 78dvh; overflow-y: auto; box-shadow: 0 8px 40px #000c;
 }
-.verdict-banner h3 { margin: 0 0 6px; color: var(--brass); }
+.verdict-banner h3 { margin: 10px 0 6px; color: var(--brass); }
+/* Case debrief card */
+.cs-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.cs-outcome { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; letter-spacing: 0.04em; }
+.cs-won .cs-outcome { color: #7fc97f; }
+.cs-lost .cs-outcome { color: #e08a7e; }
+.cs-hung .cs-outcome, .cs-mixed .cs-outcome { color: var(--brass); }
+.cs-grade {
+  font-family: var(--font-display); font-weight: 600; color: #191408;
+  background: linear-gradient(180deg, #f0d996, #c9a24b); border-radius: 999px; padding: 3px 14px;
+}
+.cs-counts { color: var(--ink-dim); font-size: 0.85rem; margin-top: 2px; }
+.cs-sect { margin-top: 8px; border-top: 1px solid #35302666; padding-top: 6px; }
+.cs-sect summary { cursor: pointer; color: var(--brass); font-family: var(--font-display); letter-spacing: 0.04em; user-select: none; }
+.cs-item { color: var(--ink-dim); font-size: 0.86rem; line-height: 1.5; padding: 3px 2px 3px 6px; }
 .verdict-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
 .verdict-actions a.btn { text-decoration: none; display: inline-block; }
 

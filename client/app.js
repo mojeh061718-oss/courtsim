@@ -891,10 +891,38 @@
     if (!v) return;
     const banner = $('#verdict-banner');
     banner.innerHTML = '';
+
+    const cs = S.state.caseSummary;
+    if (cs) {
+      const headline = cs.outcome === 'won' ? '🏆 YOU WON THE CASE'
+        : cs.outcome === 'lost' ? 'You lost this one'
+        : cs.outcome === 'hung' ? 'Hung jury — no verdict'
+        : 'Split result';
+      const head = el('div', `cs-head cs-${cs.outcome}`);
+      head.appendChild(el('span', 'cs-outcome', headline));
+      head.appendChild(el('span', 'cs-grade', `Grade: ${cs.grade}`));
+      banner.appendChild(head);
+      banner.appendChild(el('div', 'cs-counts', `${cs.counts.won} count${cs.counts.won === 1 ? '' : 's'} won · ${cs.counts.lost} lost · ${cs.counts.hung} hung`));
+    }
+
     banner.appendChild(el('h3', null, S.state.deliberation.hung ? 'Verdict (with hung counts)' : 'Verdict'));
     for (const ch of S.selectedCase.charges) {
       const line = v[ch.id] === 'hung' ? 'HUNG JURY — no unanimous verdict' : String(v[ch.id]).replace(/_/g, ' ').toUpperCase();
       banner.appendChild(el('div', null, `${ch.name}: ${line}`));
+    }
+
+    if (cs) {
+      const sect = (title, items, open) => {
+        if (!items || !items.length) return;
+        const d = el('details', 'cs-sect');
+        if (open) d.open = true;
+        d.appendChild(el('summary', null, title));
+        for (const it of items) d.appendChild(el('div', 'cs-item', '• ' + it));
+        banner.appendChild(d);
+      };
+      sect('⭐ Your best arguments', cs.bestArguments, true);
+      sect('⚖️ What decided it', cs.turningPoints, true);
+      sect('📈 For next trial', cs.improvement, false);
     }
     const row = el('div', 'verdict-actions');
     const view = el('button', 'btn primary small', '📄 Transcript & juror sheet (PDF)');
