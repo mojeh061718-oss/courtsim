@@ -51,9 +51,11 @@ export function profile(level) {
   return { level: l, label, counsel, judge, juror };
 }
 
-/** How many questions the AI gets per examination at this level. */
+/** Ceiling on AI questions per examination — a backstop, not a target: the
+ * examining counsel is instructed to run a complete direct and pass only when
+ * the witness's material knowledge is fully elicited. */
 export function maxQuestionsFor(level, base) {
-  return Math.max(3, Math.min(10, base + Math.floor((clampLevel(level) - 5) / 2)));
+  return Math.max(8, Math.min(20, base + (clampLevel(level) - 5)));
 }
 
 /** Label for how contested the FACTS of a generated case are (1-10). */

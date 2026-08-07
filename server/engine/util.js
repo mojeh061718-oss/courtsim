@@ -30,8 +30,8 @@ export function sentences(text) {
 }
 
 export const CONFIG = {
-  maxAiWitnesses: Number(process.env.MAX_AI_WITNESSES || 3),
-  maxAiQuestions: Number(process.env.MAX_AI_QUESTIONS || 6),
+  maxAiWitnesses: Number(process.env.MAX_AI_WITNESSES || 6),
+  maxAiQuestions: Number(process.env.MAX_AI_QUESTIONS || 14),
   jurySize: Number(process.env.JURY_SIZE || 12),
   maxDelibRounds: Number(process.env.MAX_DELIB_ROUNDS || 4),
   jurorAliasing: process.env.JUROR_ALIASING !== '0',
