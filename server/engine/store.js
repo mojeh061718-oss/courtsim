@@ -88,6 +88,33 @@ export function loadTrial(id) {
   }
 }
 
+/* Permanent transcript archive: written the moment a verdict lands, never
+ * touched by any purge. The trial state may be wiped afterward — the
+ * transcript survives. */
+const ARCHIVE_DIR = path.join(process.env.DATA_DIR || path.join(process.cwd(), 'data'), 'archive');
+try { fs.mkdirSync(ARCHIVE_DIR, { recursive: true }); } catch { /* logged via storeOk path */ }
+
+export function archivePath(name) {
+  return /^[A-Za-z0-9._-]{1,120}$/.test(name) && !name.includes('..') ? path.join(ARCHIVE_DIR, name) : null;
+}
+
+export function saveArchive(name, buffer) {
+  const p = archivePath(name);
+  if (!p) return;
+  fs.writeFile(p, buffer, (err) => { if (err) console.error('[archive] save', err); });
+}
+
+export function listArchive() {
+  try {
+    return fs.readdirSync(ARCHIVE_DIR)
+      .filter((n) => n.endsWith('.pdf'))
+      .map((n) => { const st = fs.statSync(path.join(ARCHIVE_DIR, n)); return { name: n, size: st.size, mtime: st.mtimeMs }; })
+      .sort((a, b) => b.mtime - a.mtime);
+  } catch {
+    return [];
+  }
+}
+
 export function deleteTrial(id) {
   const file = fileFor(String(id || ''));
   if (!file) return;

@@ -110,6 +110,24 @@ button, .btn, .tab, .docket-item, textarea, select { touch-action: manipulation;
 .resume-card .rc-sub { color: var(--ink-dim); font-size: 0.84rem; margin: 4px 0 12px; }
 .resume-card .rc-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
+/* Past trials — the archive shelf */
+.past-trials {
+  max-width: 720px; margin: 10px auto 0; width: calc(100% - 40px);
+  background: linear-gradient(180deg, #201b13, #1a1610);
+  border: 1px solid #35302666; border-radius: 12px; padding: 6px 16px 8px;
+}
+.pt-wrap summary {
+  cursor: pointer; color: var(--brass); font-family: var(--font-display);
+  letter-spacing: 0.05em; padding: 8px 0; user-select: none;
+}
+.pt-row {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  padding: 8px 4px; border-top: 1px solid #35302644; text-decoration: none;
+}
+.pt-row .pt-title { color: var(--ink); font-size: 0.9rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pt-row .pt-meta { color: var(--ink-dim); font-size: 0.74rem; white-space: nowrap; flex-shrink: 0; }
+.pt-row:hover .pt-title { color: var(--brass); }
+
 /* Case creator — the drafting desk */
 .generator-panel {
   max-width: 720px; margin: 18px auto 8px; width: calc(100% - 40px);

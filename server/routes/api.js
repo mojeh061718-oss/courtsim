@@ -7,7 +7,7 @@ import { buildTranscript } from '../engine/transcript.js';
 import { renderTranscriptPdf } from '../engine/transcriptPdf.js';
 import { generateCase, registerGeneratedCase } from '../generator/caseGenerator.js';
 import { buildStrategySheet } from '../engine/strategy.js';
-import { saveTrial, loadTrial, deleteTrial, purgeCompleted, storeHealthy } from '../engine/store.js';
+import { saveTrial, loadTrial, deleteTrial, purgeCompleted, storeHealthy, saveArchive, listArchive, archivePath } from '../engine/store.js';
 import { synthesize } from '../tts/polly.js';
 import { chat } from '../llm/grokClient.js';
 import { hasLiveModel, providerInfo } from '../llm/grokClient.js';
@@ -195,6 +195,18 @@ router.post('/trial/:id/strategy', async (req, res) => {
   }
 });
 
+// Past trials: permanently archived transcripts of every finished trial.
+router.get('/archive', (_req, res) => {
+  res.json({ transcripts: listArchive() });
+});
+router.get('/archive/:name', (req, res) => {
+  const p = archivePath(req.params.name);
+  if (!p) return res.status(400).json({ error: 'bad name' });
+  res.sendFile(p, { headers: { 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline' } }, (err) => {
+    if (err && !res.headersSent) res.status(404).json({ error: 'not found' });
+  });
+});
+
 // Close a trial for good — memory and disk, as if never started.
 router.delete('/trial/:id', (req, res) => {
   sessions.delete(req.params.id);
@@ -216,6 +228,23 @@ router.post('/trial/:id/action', async (req, res) => {
   try {
     const result = await handleAction(s.state, s.caseFile, req.body || {});
     saveTrial(s);
+    // A verdict permanently archives the transcript BEFORE any cleanup can
+    // ever touch the trial — the state may be wiped later; the record never is.
+    if (s.state.phase === 'verdict' && !s.archived) {
+      s.archived = true;
+      setImmediate(async () => {
+        try {
+          const { buildTranscript } = await import('../engine/transcript.js');
+          const { renderTranscriptPdf } = await import('../engine/transcriptPdf.js');
+          const { pages } = await buildTranscript(s.state, s.caseFile);
+          const pdf = await renderTranscriptPdf(pages, s.state, s.caseFile);
+          const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+          saveArchive(`${s.caseFile.id}-${stamp}-${s.state.id}.pdf`, pdf);
+        } catch (err) {
+          console.error('[archive]', err);
+        }
+      });
+    }
     res.json(result);
   } catch (err) {
     console.error('[api]', err);
