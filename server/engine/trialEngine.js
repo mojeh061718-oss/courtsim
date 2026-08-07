@@ -76,6 +76,7 @@ export async function handleAction(state, caseFile, action) {
       case 'file_motion': await userFilesMotion(state, caseFile, events, action.text); break;
       case 'respond': await userResponds(state, caseFile, events, action.text); break;
       case 'statement': await userStatement(state, caseFile, events, action.text); break;
+      case 'auto_statement': await userAutoStatement(state, caseFile, events); break;
       case 'call_witness': await userCallsWitness(state, caseFile, events, action.witnessId); break;
       case 'ask': await userAsks(state, caseFile, events, action.text); break;
       case 'objection': await userObjects(state, caseFile, events, action); break;
@@ -559,11 +560,29 @@ async function aiNextQuestion(state, caseFile, w) {
   );
 }
 
-async function aiStatement(state, caseFile, kindLabel) {
+/* Auto-draft the USER's opening on request. Openings preview the evidence
+ * rather than argue, so drafting one reveals no strategy — the generated
+ * text is submitted through the exact same pipeline as a typed statement:
+ * opposing counsel may object, the judge screens it, and it enters the
+ * record as the user's own opening. */
+async function userAutoStatement(state, caseFile, events) {
+  if (state.phase !== 'openings') {
+    push(events, state, sys('system', 'Auto-drafting is available for opening statements only.', { speak: false }));
+    return;
+  }
+  if (state.openingTurn !== state.userSide) {
+    push(events, state, sys('system', 'It is not your turn to address the jury.', { speak: false }));
+    return;
+  }
+  const text = await aiStatement(state, caseFile, 'opening statement', state.userSide);
+  await userStatement(state, caseFile, events, text);
+}
+
+async function aiStatement(state, caseFile, kindLabel, side = state.aiSide) {
   const transcript = transcriptText(state);
   return await chat(
     [
-      { role: 'system', content: counselSystem({ caseFile, side: state.aiSide, phaseLabel: kindLabel, difficulty: diff(state).counsel }) },
+      { role: 'system', content: counselSystem({ caseFile, side, phaseLabel: kindLabel, difficulty: diff(state).counsel }) },
       { role: 'user', content: `RECORD SO FAR:\n${transcript}\n\nStanding exclusions you must honor:\n${state.exclusions.map((e) => `- ${e}`).join('\n') || '- none'}\n\nDeliver your ${kindLabel} to the jury now. 4-7 short paragraphs, spoken prose, separated by blank lines. ${kindLabel === 'opening statement' ? 'Preview the evidence; do not argue.' : 'Argue the evidence against the elements; end with a clear ask.'}` },
     ],
     {
@@ -571,8 +590,8 @@ async function aiStatement(state, caseFile, kindLabel) {
       effort: 'low', hedgeDelayMs: 3500,
       provider: 'xai',
       mock: () => {
-        const theory = caseFile.theories[state.aiSide];
-        const ev = caseFile.evidence.filter((e) => e.offeredBy === state.aiSide || e.offeredBy === 'both').slice(0, 3).map((e) => e.label.replace(/Exhibit \d+: /, ''));
+        const theory = caseFile.theories[side];
+        const ev = caseFile.evidence.filter((e) => e.offeredBy === side || e.offeredBy === 'both').slice(0, 3).map((e) => e.label.replace(/Exhibit \d+: /, ''));
         return `May it please the court. Members of the jury, ${theory}\n\nThe evidence will speak plainly: ${ev.join('; ')}.\n\n${kindLabel === 'opening statement' ? 'Listen closely to each witness — the story they tell together is the only one that fits.' : `When you apply the law to this record, only one verdict is faithful to your oath. We ask you to return it.`}`;
       },
     }
