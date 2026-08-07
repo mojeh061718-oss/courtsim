@@ -96,6 +96,10 @@ router.get('/cases/:id/binder', (req, res) => {
     juryInstructions: c.juryInstructions,
     witnesses: c.witnesses,
     evidence: c.evidence,
+    // Public-record dossier: user reference material ONLY. It is never fed to
+    // any AI actor — witnesses testify solely from their knowledge fields, so
+    // outside documents can never leak into the simulated record.
+    publicRecord: c.publicRecord || [],
     disclaimer: c.disclaimer,
   });
 });
