@@ -822,22 +822,55 @@ async function deliverVerdict(state, caseFile, events) {
   push(events, state, { id: nextId(), actor: 'juror', name: `Foreperson — Juror ${foreperson.seat}, ${foreperson.name}`, side: null, text: lines.join(' '), kind: 'verdict', speak: true });
   push(events, state, judgeEv(caseFile, `The verdict is recorded. Members of the jury, thank you for your service; you are discharged. We are adjourned.`, {}));
 
-  const review = await chat(
+  // Win/loss is computed objectively from the verdict, per count, for the
+  // USER's side; the judge's debrief supplies grade, best arguments, and the
+  // turning points that decided it.
+  const counts = { won: 0, lost: 0, hung: 0 };
+  for (const ch of caseFile.charges) {
+    const opt = v[ch.id];
+    if (opt === 'hung') counts.hung += 1;
+    else if (String(opt).startsWith('guilty') === (state.userSide === 'prosecution')) counts.won += 1;
+    else counts.lost += 1;
+  }
+  const outcome = counts.lost === 0 && counts.won > 0 && counts.hung === 0 ? 'won'
+    : counts.won === 0 && counts.lost > 0 && counts.hung === 0 ? 'lost'
+    : counts.won === 0 && counts.lost === 0 ? 'hung' : 'mixed';
+
+  const delibTail = state.deliberation.log.slice(-12).map((m) => `[R${m.round}] Juror ${m.seat}: ${m.statement}`).join('\n');
+  const debrief = await chat(
     [
       { role: 'system', content: judgeSystem({ caseFile, difficulty: diff(state).judge }) },
-      { role: 'user', content: `FULL RECORD:\n${transcriptText(state, 14000)}\n\n${performanceReviewTask({ side: state.userSide, score: state.score })}` },
+      { role: 'user', content: `FULL RECORD:\n${transcriptText(state, 14000)}\n\nVERDICT: ${JSON.stringify(v)} (the ${state.userSide} — the human attorney — ${outcome.toUpperCase()} on this verdict: ${counts.won} count(s) won, ${counts.lost} lost, ${counts.hung} hung)\n\nFROM THE JURY ROOM (sealed deliberations, final rounds):\n${delibTail || '(none)'}\n\n${performanceReviewTask({ side: state.userSide, score: state.score })}` },
     ],
     {
+      json: true,
       temperature: 0.6,
       provider: 'xai',
       mock: () => {
         const s = state.score;
         const grade = s.admonishments > 2 ? 'C-' : s.userObjections.sustained >= s.userObjections.overruled ? 'B+' : 'B-';
-        return `Counsel, a word from the bench now that the jury is gone. Overall grade: ${grade}. You raised ${s.userObjections.sustained + s.userObjections.overruled} objections (${s.userObjections.sustained} sustained) — ${s.userObjections.sustained >= s.userObjections.overruled ? 'your instincts for the rules of evidence are sound' : 'choose your moments more carefully; overruled objections spend credibility'}. Opposing counsel blocked ${s.aiObjections.sustained} of your submissions, and the bench admonished you ${s.admonishments} time(s) — ${s.admonishments === 0 ? 'a clean record of professionalism' : 'watch the line; juries punish lawyers the judge scolds'}. Sharpen your case theory into a single sentence and make every witness serve it. Dismissed.`;
+        return {
+          grade,
+          review: `Counsel, a word from the bench now that the jury is gone. Overall grade: ${grade}. You raised ${s.userObjections.sustained + s.userObjections.overruled} objections (${s.userObjections.sustained} sustained). Opposing counsel blocked ${s.aiObjections.sustained} of your submissions, and the bench admonished you ${s.admonishments} time(s). Sharpen your case theory into a single sentence and make every witness serve it. Dismissed.`,
+          bestArguments: ['Your strongest material tracked your case theory', 'Objections you won protected the record at the right moments'],
+          turningPoints: ['The exhibits the jurors repeated by name in deliberation decided the close counts'],
+          improvement: ['Tie every examination to an element of a charge', 'Spend objections only where the harm is real'],
+        };
       },
     }
   );
-  push(events, state, judgeEv(caseFile, review, { kind: 'performance_review' }));
+  const d = debrief && typeof debrief === 'object' ? debrief : {};
+  const arr = (x, n) => (Array.isArray(x) ? x.map((i) => String(i)).slice(0, n) : []);
+  state.caseSummary = {
+    outcome,
+    counts,
+    verdict: v,
+    grade: String(d.grade || '—').slice(0, 3),
+    bestArguments: arr(d.bestArguments, 5),
+    turningPoints: arr(d.turningPoints, 5),
+    improvement: arr(d.improvement, 3),
+  };
+  push(events, state, judgeEv(caseFile, String(d.review || 'Counsel, see your written debrief.'), { kind: 'performance_review' }));
 }
 
 function humanVerdict(opt) {
@@ -956,6 +989,7 @@ export function publicState(state, caseFile) {
     exclusions: state.exclusions,
     motions: state.motions,
     score: state.score,
+    caseSummary: state.caseSummary || null,
     deliberation: { round: state.deliberation.round, verdict: state.deliberation.verdict, hung: state.deliberation.hung },
     jury: state.jury.map((j) => ({ seat: j.seat, name: j.name, occupation: j.occupation })),
   };

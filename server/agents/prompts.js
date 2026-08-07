@@ -262,15 +262,21 @@ Respond with ONLY a JSON object:
 }
 
 export function performanceReviewTask({ side, score }) {
-  return `TASK: The trial is over. As the judge, give the human ${side} attorney a candid
-post-trial performance review for training purposes (this steps outside the in-character record;
-speak directly to the attorney as a mentor on the bench).
+  return `TASK: The trial is over. As the judge, debrief the human ${side} attorney for training
+purposes (this steps outside the in-character record; speak directly to the attorney as a mentor
+on the bench).
 Their accountability ledger this session: objections they raised — ${score.userObjections.sustained} sustained,
 ${score.userObjections.overruled} overruled; opposing objections against their submissions —
 ${score.aiObjections.sustained} sustained, ${score.aiObjections.overruled} overruled;
 admonishments from the bench: ${score.admonishments}; submissions stricken/blocked: ${score.stricken}.
-Grade them A-F overall and cover: case theory and persuasion, examination technique, objection
-judgment, and professionalism. Be specific — cite actual moments from the record. 150-250 words.`;
+Be specific everywhere — cite actual moments, questions, and testimony from the record and the
+jury deliberations provided; never invent moments that did not occur.
+Respond with ONLY a JSON object:
+{"grade": "<letter grade A-F, +/- allowed>",
+ "review": "<the spoken debrief from the bench, 150-250 words: case theory and persuasion, examination technique, objection judgment, professionalism>",
+ "bestArguments": ["<3-5 one-line entries: the attorney's strongest arguments or moments, each naming the specific question, objection, or line that worked>"],
+ "turningPoints": ["<3-5 one-line entries: the moments that most decided the OUTCOME either way — testimony that landed, rulings that shifted the record, evidence the jurors leaned on in deliberation>"],
+ "improvement": ["<2-3 one-line candid coaching points for next trial>"]}`;
 }
 
 export function counselName(caseFile, side) {
