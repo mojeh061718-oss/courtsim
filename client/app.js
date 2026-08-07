@@ -830,6 +830,12 @@
         if (turn === st.userSide) {
           input.placeholder = st.phase === 'openings' ? 'Deliver your opening statement… (opposing counsel may object before the jury hears it)' : 'Deliver your closing argument…';
           hint.textContent = 'Type your full address to the jury, then Send. Opposing counsel reviews it BEFORE it reaches the jurors\' ears.';
+          if (st.phase === 'openings') {
+            // Openings preview the evidence — no strategy is exposed by
+            // letting the machine draft one on the user's behalf.
+            addBtn('✍️ Auto-draft my opening', () => send({ type: 'auto_statement' }), 'btn');
+            hint.textContent = 'Type your opening and Send — or tap Auto-draft and your side\'s opening is written and delivered for you.';
+          }
         } else {
           addBtn('Let opposing counsel proceed', () => send({ type: 'proceed' }), 'btn primary');
           input.placeholder = 'Opposing counsel has the floor. Press OBJECTION (O) at any point while they speak.';
