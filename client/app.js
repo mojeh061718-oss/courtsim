@@ -552,6 +552,25 @@
 
     const parties = section('Parties & court');
     item(parties, null, `${b.title}${b.caseNumber ? ' — ' + b.caseNumber : ''}\nPresiding: Hon. ${b.parties.judge}\nDefendant: ${b.parties.defendant}\nVictim(s): ${b.parties.victims.join('; ')}\nProsecution: ${b.parties.prosecutor}\nDefense: ${b.parties.defenseCounsel}`);
+
+    // Public-record dossier — documents and sworn-testimony coverage from the
+    // real case. Reference for the human only; no AI actor ever sees it.
+    if (Array.isArray(b.publicRecord) && b.publicRecord.length) {
+      const dossier = section(`📁 Public filings & testimony (${b.publicRecord.length})`);
+      for (const d of b.publicRecord) {
+        const n = el('div', 'binder-item');
+        n.appendChild(el('div', 'bi-head', `[${(d.type || 'document').toUpperCase()}] ${d.title}${d.date ? ' — ' + d.date : ''}`));
+        n.appendChild(el('div', 'bi-body', (d.points || []).map((p) => '• ' + p).join('\n')));
+        if (d.source) {
+          const a = el('a', 'bi-src', 'source ↗');
+          a.href = d.source;
+          a.target = '_blank';
+          a.rel = 'noopener';
+          n.appendChild(a);
+        }
+        dossier.appendChild(n);
+      }
+    }
   }
 
   $('#binder-search').addEventListener('input', () => {

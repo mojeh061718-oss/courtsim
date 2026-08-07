@@ -265,6 +265,8 @@ input[type="range"] { accent-color: var(--brass); width: 100%; }
 .binder-item { padding: 6px 6px 8px 10px; border-left: 2px solid var(--line); margin: 0 0 8px 4px; }
 .binder-item .bi-head { color: var(--ink); font-size: 0.85rem; margin-bottom: 3px; font-weight: bold; }
 .binder-item .bi-body { color: var(--ink-dim); font-size: 0.82rem; line-height: 1.5; white-space: pre-wrap; }
+.binder-item .bi-src { display: inline-block; margin-top: 4px; color: var(--brass); font-size: 0.74rem; text-decoration: none; }
+.binder-item .bi-src:hover { text-decoration: underline; }
 
 /* War room — private strategy sheet */
 .strategy-privacy {
