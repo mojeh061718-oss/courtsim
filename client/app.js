@@ -70,7 +70,34 @@
     S.bases = bases;
     renderCaseList();
     fillBasisSelect();
+    renderPastTrials();
     await tryResume();
+  }
+
+  // Past trials — every finished trial's transcript, archived permanently at
+  // the moment of verdict. Nothing on the cleanup side can touch these.
+  async function renderPastTrials() {
+    let list = [];
+    try { ({ transcripts: list } = await api('/archive', { timeoutMs: 15000 })); } catch { return; }
+    if (!list.length) return;
+    const box = $('#past-trials');
+    box.innerHTML = '';
+    const d = el('details', 'pt-wrap');
+    d.appendChild(el('summary', null, `📜 Past trials — ${list.length} archived transcript${list.length === 1 ? '' : 's'}`));
+    for (const t of list) {
+      const m = t.name.match(/^(.+?)-(\d{4}-\d{2}-\d{2})-(\d{2})-(\d{2})-/);
+      const caseTitle = m ? (S.cases.find((c) => c.id === m[1])?.title || m[1]) : t.name;
+      const when = m ? `${m[2]} ${m[3]}:${m[4]} UTC` : '';
+      const row = el('a', 'pt-row');
+      row.href = '/api/archive/' + encodeURIComponent(t.name);
+      row.target = '_blank';
+      row.rel = 'noopener';
+      row.appendChild(el('span', 'pt-title', caseTitle));
+      row.appendChild(el('span', 'pt-meta', `${when} · ${Math.max(1, Math.round(t.size / 1024))} KB · PDF ↗`));
+      d.appendChild(row);
+    }
+    box.appendChild(d);
+    box.classList.remove('hidden');
   }
 
   /* ================= auto save / resume ================= */
